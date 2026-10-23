@@ -1,0 +1,30 @@
+scenario,time,trigger,rhombus_result,stopped_at,duration_s,counted,note,source
+baseline,2026-10-22 06:07,manual,success,,138,yes,first passing build (prompt 5); the first run after a build writes each step's code,docs/setup/03-rhombus-pipeline.md#prompt-log
+baseline,2026-10-22 06:30,schedule,success,,,yes,the scheduled baseline run (Rhombus doesn't show scheduled runs' duration),observations/baseline.md
+baseline,2026-10-22 15:17:27,manual,success,,14,yes,check after rebuilding in a clean project (prompt 6),docs/prompts/06-rebuild-clean-baseline.md
+baseline,2026-10-22 16:34:58,apply,success,,8,yes,check after rebuilding before schema-drift5 (prompt 7),docs/prompts/07-rebuild-before-schema-drift5.md
+baseline,2026-10-22 18:07:28,apply,success,,153,yes,check after rebuilding before semantic-drift1 (prompt 7); the first run after a build writes each step's code,docs/prompts/07-rebuild-before-schema-drift5.md
+schema-drift1-drop-column,2026-10-22 14:06:40,apply,failed,brand_case_fix,,yes,Column 'Brand' does not exist,observations/schema-drift1-drop-column.md
+schema-drift1-drop-column,,manual,failed,brand_case_fix,,yes,re-run after the chatbot's fix: same error and same code_sha,observations/schema-drift1-drop-column.md
+schema-drift2-rename-column,2026-10-22 14:17:40,apply,failed,drop_empty_price_fuelcode,,yes,Column 'Price' does not exist,observations/schema-drift2-rename-column.md
+schema-drift2-rename-column,2026-10-22 14:20:45,manual,failed,drop_empty_price_fuelcode,,yes,re-run after the chatbot's fix: same error and same code_sha,observations/schema-drift2-rename-column.md
+schema-drift3-change-type,2026-10-22 15:29:43,apply,failed,suburb_title_case,9,yes,switching the input wiped the step's settings,observations/schema-drift3-change-type.md
+schema-drift3-change-type,2026-10-22 15:31:56,manual,failed,dedup_final,7,yes,switching the input wiped the step's settings,observations/schema-drift3-change-type.md
+schema-drift3-change-type,2026-10-22 15:34:26,manual,failed,dedup_final,8,yes,DataFrame should not be empty (every row dropped at postcode_clean),observations/schema-drift3-change-type.md
+schema-drift3-change-type,2026-10-22 15:37:38,manual,failed,dedup_final,5,yes,re-run after the chatbot's fix: same error,observations/schema-drift3-change-type.md
+schema-drift4-add-column,2026-10-22 15:53:33,apply,failed,suburb_title_case,6,yes,switching the input wiped the step's settings,observations/schema-drift4-add-column.md
+schema-drift4-add-column,2026-10-22 15:55:11,manual,failed,suburb_title_case,5,yes,the chatbot's replacement step had an empty prompt,observations/schema-drift4-add-column.md
+schema-drift4-add-column,2026-10-22 15:56:41,manual,failed,dedup_final,24,yes,switching the input wiped the step's settings,observations/schema-drift4-add-column.md
+schema-drift4-add-column,2026-10-22 15:58:03,manual,failed,dedup_final,11,yes,the chatbot's replacement step had an empty prompt,observations/schema-drift4-add-column.md
+schema-drift4-add-column,2026-10-22 15:59:19,manual,failed,gcs_export,22,no,export destination lost (setup; not counted),observations/schema-drift4-add-column.md
+schema-drift4-add-column,2026-10-22 16:01:33,manual,failed,gcs_export,9,no,export destination (setup; not counted),observations/schema-drift4-add-column.md
+schema-drift4-add-column,2026-10-22 16:15:54,apply,success,,15,yes,57 rows short of expected (the chatbot's dedup ignores the new column),observations/schema-drift4-add-column.md
+schema-drift4-add-column,2026-10-22 16:15:58,apply,success,,11,yes,second run started by the same Apply; byte-identical output,observations/schema-drift4-add-column.md
+schema-drift5-combined,2026-10-22 16:38:17,apply,failed,drop_empty_price_fuel,10,yes,bare KeyError 'Price',observations/schema-drift5-combined.md
+schema-drift5-combined,2026-10-22 16:40:12,manual,failed,brand_normalise,27,yes,Column 'Brand' does not exist,observations/schema-drift5-combined.md
+schema-drift5-combined,2026-10-22 16:45:14,manual,failed,gcs_export,93,no,export destination lost (setup; not counted),observations/schema-drift5-combined.md
+schema-drift5-combined,2026-10-22 16:48:30,apply,success,,9,yes,"""success"" with a header-only file (0 rows)",observations/schema-drift5-combined.md
+semantic-drift1-cents-to-dollars,2026-10-22 18:57:35,apply,failed,gcs_export,13,no,export destination lost (setup; not counted),observations/semantic-drift1-cents-to-dollars.md
+semantic-drift1-cents-to-dollars,2026-10-22 18:59:17,apply,success,,10,yes,"""success"" with a header-only file (0 rows)",observations/semantic-drift1-cents-to-dollars.md
+semantic-drift2-date-mmdd,2026-10-22 19:07:35,apply,failed,gcs_export,14,no,export destination lost (setup; not counted),observations/semantic-drift2-date-mmdd.md
+semantic-drift2-date-mmdd,2026-10-22 19:09:20,apply,success,,11,yes,no warnings,observations/semantic-drift2-date-mmdd.md

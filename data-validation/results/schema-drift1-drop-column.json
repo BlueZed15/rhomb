@@ -1,0 +1,28 @@
+{
+  "input_file": "datasets\\schema-drift1-drop-column.csv",
+  "output_file": null,
+  "input_rows": 2613,
+  "input_columns": [
+    "ServiceStationName",
+    "Address",
+    "Suburb",
+    "Postcode",
+    "FuelCode",
+    "PriceUpdatedDate",
+    "Price"
+  ],
+  "schema_vs_baseline": {
+    "missing": [
+      "Brand"
+    ],
+    "extra": []
+  },
+  "expected_rows": null,
+  "expected_note": "the cleaning rules can't run on this input (AttributeError: 'DataFrame' object has no attribute 'Brand')",
+  "output": null,
+  "reasons": [
+    "input columns changed: Brand removed",
+    "no output was written"
+  ],
+  "verdict": "FAIL"
+}

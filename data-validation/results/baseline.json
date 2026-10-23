@@ -1,0 +1,156 @@
+{
+  "input_file": "datasets\\baseline.csv",
+  "output_file": "data-validation\\downloads\\output_baseline.csv",
+  "input_rows": 2613,
+  "input_columns": [
+    "ServiceStationName",
+    "Address",
+    "Suburb",
+    "Postcode",
+    "Brand",
+    "FuelCode",
+    "PriceUpdatedDate",
+    "Price"
+  ],
+  "schema_vs_baseline": {
+    "missing": [],
+    "extra": []
+  },
+  "expected_rows": 2401,
+  "expected_note": null,
+  "output_rows": 2363,
+  "output_columns": [
+    "ServiceStationName",
+    "Address",
+    "Suburb",
+    "Postcode",
+    "Brand",
+    "FuelCode",
+    "PriceUpdatedDate",
+    "Price"
+  ],
+  "output_sha256": "d86f4143d7f92633",
+  "duplicate_rows": 0,
+  "rows_matching_expected": 1630,
+  "rows_missing_from_output": 771,
+  "rows_unexpected_in_output": 733,
+  "examples_missing": [
+    {
+      "ServiceStationName": "7-Eleven Albion Park Rail",
+      "Address": "47-57 Princess Highway, ALBION PARK RAIL NSW 2527",
+      "Suburb": "Albion Park Rail",
+      "Postcode": "2527",
+      "Brand": "7-Eleven",
+      "FuelCode": "U91",
+      "PriceUpdatedDate": "08/09/2026 10:54:15",
+      "Price": "213.9"
+    },
+    {
+      "ServiceStationName": "7-Eleven Arndell Park",
+      "Address": "180 Reservoir Road, Arndell Park NSW 2148",
+      "Suburb": "Arndell Park",
+      "Postcode": "2148",
+      "Brand": "7-Eleven",
+      "FuelCode": "P98",
+      "PriceUpdatedDate": "11/09/2026 07:54:15",
+      "Price": "237.9"
+    },
+    {
+      "ServiceStationName": "7-Eleven Bankstown Airport",
+      "Address": "335 HENRY LAWSON DR, BANKSTOWN AERODROME NSW 2200",
+      "Suburb": "Bankstown Aerodrome",
+      "Postcode": "2200",
+      "Brand": "7-Eleven",
+      "FuelCode": "U91",
+      "PriceUpdatedDate": "10/09/2026 06:54:15",
+      "Price": "207.9"
+    },
+    {
+      "ServiceStationName": "7-Eleven Blacktown",
+      "Address": "354 Corner Flushcombe Road & Myrtle Street, Blacktown NSW 2148",
+      "Suburb": "Blacktown",
+      "Postcode": "2148",
+      "Brand": "7-Eleven",
+      "FuelCode": "E10",
+      "PriceUpdatedDate": "08/09/2026 13:45:23",
+      "Price": "204.9"
+    },
+    {
+      "ServiceStationName": "7-Eleven Blacktown",
+      "Address": "354 Corner Flushcombe Road & Myrtle Street, Blacktown NSW 2148",
+      "Suburb": "Blacktown",
+      "Postcode": "2148",
+      "Brand": "7-Eleven",
+      "FuelCode": "P95",
+      "PriceUpdatedDate": "10/09/2026 06:24:14",
+      "Price": "223.9"
+    }
+  ],
+  "examples_unexpected": [
+    {
+      "ServiceStationName": "7-Eleven Albion Park Rail",
+      "Address": "47-57 Princess Highway, ALBION PARK RAIL NSW 2527",
+      "Suburb": "Albion Park Rail",
+      "Postcode": "2527",
+      "Brand": "7-Eleven",
+      "FuelCode": "U91",
+      "PriceUpdatedDate": "09/08/2026 10:54:15",
+      "Price": "213.9"
+    },
+    {
+      "ServiceStationName": "7-Eleven Arndell Park",
+      "Address": "180 Reservoir Road, Arndell Park NSW 2148",
+      "Suburb": "Arndell Park",
+      "Postcode": "2148",
+      "Brand": "7-Eleven",
+      "FuelCode": "P98",
+      "PriceUpdatedDate": "09/11/2026 07:54:15",
+      "Price": "237.9"
+    },
+    {
+      "ServiceStationName": "7-Eleven Bankstown Airport",
+      "Address": "335 HENRY LAWSON DR, BANKSTOWN AERODROME NSW 2200",
+      "Suburb": "Bankstown Aerodrome",
+      "Postcode": "2200",
+      "Brand": "7-Eleven",
+      "FuelCode": "U91",
+      "PriceUpdatedDate": "09/10/2026 06:54:15",
+      "Price": "207.9"
+    },
+    {
+      "ServiceStationName": "7-Eleven Blacktown",
+      "Address": "354 Corner Flushcombe Road & Myrtle Street, Blacktown NSW 2148",
+      "Suburb": "Blacktown",
+      "Postcode": "2148",
+      "Brand": "7-Eleven",
+      "FuelCode": "E10",
+      "PriceUpdatedDate": "09/08/2026 13:45:23",
+      "Price": "204.9"
+    },
+    {
+      "ServiceStationName": "7-Eleven Blacktown",
+      "Address": "354 Corner Flushcombe Road & Myrtle Street, Blacktown NSW 2148",
+      "Suburb": "Blacktown",
+      "Postcode": "2148",
+      "Brand": "7-Eleven",
+      "FuelCode": "P95",
+      "PriceUpdatedDate": "09/10/2026 06:24:14",
+      "Price": "223.9"
+    }
+  ],
+  "semantic": {
+    "price_outside_fuel_band": 0,
+    "price_median": 236.9,
+    "dates_unparseable_as_ddmm": 0,
+    "dates_outside_source_month": 733,
+    "fuel_order_violations": 2
+  },
+  "reasons": [
+    "2363 rows out, 2401 expected",
+    "771 expected rows are missing or different",
+    "733 output rows aren't in the expected output",
+    "semantic check dates outside source month: 733",
+    "semantic check fuel order violations: 2"
+  ],
+  "verdict": "FAIL"
+}

@@ -1,0 +1,38 @@
+# observations/
+
+One write-up per case. Start with the [results table in the main README](../README.md#results), then open whichever case interests you.
+
+## How to read a write-up
+Every case has the same parts:
+- **A summary table**: what changed, whether the pipeline stopped, what reached GCS, whether the chatbot fixed it, and a severity from the [rubric](../README.md#severity-rubric).
+- **What I expected**, written before the run, so you can see where I was wrong.
+- **What happened**, with the exact error text and a screenshot link for each claim.
+- **The logs, the chatbot, the schedule.** These are the four questions the brief asks for every case.
+- **What I think**: my judgement, kept short.
+- **Reproduce**: the commands to run it again. They assume the setup in [`docs/setup/`](../docs/setup/) is done (your bucket, the GCS destination, and a project with the baseline pipeline from [prompt 6](../docs/prompts/06-rebuild-clean-baseline.md)).
+
+Screenshots are in [`evidence/`](evidence/): `setup/` (connecting S3), `pipeline/` (building the baseline) and `drift/` (the drift runs, numbered in the order they happened).
+
+## Order of the cases
+1. [Setup: S3 connection](setup-s3-source-connection.md): why the source is a link instead of the S3 connector
+2. [Baseline](baseline.md): the clean run everything is compared against
+3. Schema drift (Part 2): [schema-drift1 drop](schema-drift1-drop-column.md) · [schema-drift2 rename](schema-drift2-rename-column.md) · [schema-drift3 change type](schema-drift3-change-type.md) · [schema-drift4 add](schema-drift4-add-column.md) · [schema-drift5 all four at once](schema-drift5-combined.md)
+4. Semantic drift (Part 3): [semantic-drift1 cents → dollars](semantic-drift1-cents-to-dollars.md) · [semantic-drift2 dates as MM/DD](semantic-drift2-date-mmdd.md)
+
+## Terms used in the write-ups
+| Term | What it means |
+|---|---|
+| **AI builder / chatbot** | Rhombus's chat panel. "AI builder" is when I ask it to build or change the pipeline; "chatbot" is when I paste an error with its **Ask Chatbot** button and ask for a fix. It's the same assistant |
+| **Pipeline mode** | A chat mode (typed as `/pipeline`) that lets the assistant edit the pipeline directly |
+| **Lattice / Facet** | Rhombus's model choices. Lattice is the stronger one (Opus 4.6); Facet (Sonnet 4.6) is the default and comes back on every page load. I used Lattice for the chatbot |
+| **Node** | One step on the pipeline canvas |
+| **Built-in node** | A ready-made step with settings (e.g. "Change Text Case", "Remove Duplicates") |
+| **LLM node** | A step where Rhombus writes Python from a plain-English instruction, then runs that code |
+| **`code_sha`** | An ID for the code an LLM node actually runs, printed in its errors. If a "fix" leaves it unchanged, the fix didn't change what runs |
+| **Data Input / From Web URL** | The input step, and its option to import a file from a link. I used it with a presigned S3 link because the S3 connector was blocked ([D9](../docs/decisions.md#d9-s3-through-a-presigned-url-instead-of-the-s3-connector)) |
+| **Presigned link** | A temporary S3 link with a signature in it, so a private file can be read without sharing keys |
+| **`Table 1.csv`, `Table 1 (3).csv`** | The names Rhombus gives each imported file. A new import gets the next number |
+| **`drift1`, `fuelcheck-baseline`** | My two Rhombus projects. `drift1` held schema-drift1 to schema-drift3 (first attempt). Every later case started in `fuelcheck-baseline`, from the same verified pipeline |
+| **schema-drift1–5, semantic-drift1–2** | Case IDs. Schema drift is Part 2 of the brief: one change at a time, then all four at once (schema-drift5). Semantic drift is Part 3. Files, results and screenshots all start with the ID. The S3 archive copies keep their original numbered names (`fuelcheck_1_…` is schema-drift1, …, `fuelcheck_7_…` is semantic-drift2). [`runs.csv`](../data-validation/runs.csv) maps each case to its input file in S3 and its output in GCS. |
+| **Answer key** | The correct cleaned output, written by my dataset script ([`baseline_expected.csv`](../datasets/)). Used to check what Rhombus produced |
+| **Byte-identical / sha256** | Two output files are exactly the same, down to the byte. I used this to prove a rebuilt pipeline still matched the original baseline |

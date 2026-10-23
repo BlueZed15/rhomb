@@ -1,0 +1,41 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "RhomboManagedComputeGetBucketLocation",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::730335216038:role/rhombusai-production-eks-cluster-app-secrets",
+          "arn:aws:iam::730335216038:role/rhombo-native-s3-managed-compute--GlueExecutionRole-8hk4bLprqo3U"
+        ]
+      },
+      "Action": ["s3:GetBucketLocation"],
+      "Resource": "arn:aws:s3:::rhombus-input-data"
+    },
+    {
+      "Sid": "RhomboManagedComputeListConfiguredPrefix",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::730335216038:role/rhombusai-production-eks-cluster-app-secrets",
+          "arn:aws:iam::730335216038:role/rhombo-native-s3-managed-compute--GlueExecutionRole-8hk4bLprqo3U"
+        ]
+      },
+      "Action": ["s3:ListBucket"],
+      "Resource": "arn:aws:s3:::rhombus-input-data"
+    },
+    {
+      "Sid": "RhomboManagedComputeReadConfiguredPrefix",
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": [
+          "arn:aws:iam::730335216038:role/rhombusai-production-eks-cluster-app-secrets",
+          "arn:aws:iam::730335216038:role/rhombo-native-s3-managed-compute--GlueExecutionRole-8hk4bLprqo3U"
+        ]
+      },
+      "Action": ["s3:GetObject"],
+      "Resource": "arn:aws:s3:::rhombus-input-data/*"
+    }
+  ]
+}

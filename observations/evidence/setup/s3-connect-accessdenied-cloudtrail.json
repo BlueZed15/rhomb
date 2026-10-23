@@ -1,0 +1,19 @@
+{
+  "_note": "CloudTrail record in the bucket owner's account (ap-southeast-2) for Rhombus's S3 connection check, 2026-10-21. The bucket policy in place at this time matched Rhombus's generated whole-bucket policy exactly, which allows s3:GetBucketLocation for both Rhombus roles.",
+  "eventTime": "2026-10-21T08:10:40Z",
+  "eventName": "GetBucketLocation",
+  "userIdentity": {
+    "type": "AWSAccount",
+    "principalId": "AROA2UC27AGTLYXU6JHR5:botocore-session-1791959066",
+    "accountId": "730335216038"
+  },
+  "userAgent": "Boto3/1.41.5 Botocore/1.41.5 python/3.11.17 linux",
+  "errorCode": "AccessDenied",
+  "errorMessage": "Access Denied",
+  "requestParameters": { "bucketName": "rhombus-input-data", "Host": "s3.ap-southeast-2.amazonaws.com" },
+  "httpStatusCode": 403,
+  "requestID": "QXHAVTYQHB4F92DC",
+  "eventID": "c9deb974-bfa4-3d1b-a414-f6ab23589dd2",
+  "vpcEndpointId": "vpce-0f6fe0414ca3e7b48",
+  "vpcEndpointAccountId": "730335216038"
+}

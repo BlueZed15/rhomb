@@ -1,0 +1,8 @@
+output_file,run_time,pipeline,input,rows,sha256,source
+output_baseline_0607.csv,2026-10-22 06:07,original build in drift1 (prompts 1-5),baseline,2363,503fd6ed186a,observations/baseline.md
+output_baseline.csv,2026-10-22 06:30 (scheduled),original build in drift1 (prompts 1-5),baseline,2363,503fd6ed186a,observations/baseline.md
+output_baseline_1517.csv,2026-10-22 15:17,rebuilt in fuelcheck-baseline (prompt 6),baseline,2363,503fd6ed186a,docs/prompts/06-rebuild-clean-baseline.md
+output_baseline_1635.csv,2026-10-22 16:35,rebuilt again (prompt 7),baseline,2363,503fd6ed186a,docs/prompts/07-rebuild-before-schema-drift5.md
+output_baseline_1810.csv,2026-10-22 18:10,rebuilt again (prompt 7; every step an LLM step),baseline,2363,503fd6ed186a,docs/prompts/07-rebuild-before-schema-drift5.md
+output_schema-drift4-add-column.csv,2026-10-22 16:16,schema-drift4 pipeline (after the chatbot's fixes),schema-drift4-add-column,2363,0c977f10f067,observations/schema-drift4-add-column.md
+output_schema-drift4-add-column_b.csv,"2026-10-22 16:16 (second run, same Apply)",schema-drift4 pipeline (after the chatbot's fixes),schema-drift4-add-column,2363,0c977f10f067,observations/schema-drift4-add-column.md

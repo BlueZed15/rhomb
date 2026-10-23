@@ -1,0 +1,5 @@
+# Python side: dataset generator, data validation, and the S3 helper scripts.
+pandas>=2.0
+numpy>=1.24
+openpyxl>=3.1   # writes the .xlsx copies Rhombus imports
+boto3>=1.28     # upload_dataset.py, presign_url.py

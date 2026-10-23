@@ -1,0 +1,18 @@
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "ListSourcePrefixAndVersions",
+      "Effect": "Allow",
+      "Action": ["s3:ListBucket", "s3:ListBucketVersions", "s3:GetBucketLocation"],
+      "Resource": "arn:aws:s3:::rhombus-input-data",
+      "Condition": { "StringLike": { "s3:prefix": ["input/", "input/*"] } }
+    },
+    {
+      "Sid": "ReadWriteSourceObjects",
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:GetObjectVersion", "s3:PutObject"],
+      "Resource": "arn:aws:s3:::rhombus-input-data/input/*"
+    }
+  ]
+}

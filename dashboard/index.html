@@ -1,0 +1,799 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rhombus Drift Tests</title>
+<meta name="description" content="Observability dashboard for testing Rhombus AI against schema and semantic drift.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono:wght@400;500&display=swap">
+<style>
+/* Type: Geist for text and Geist Mono for IDs and numbers (Vercel's dashboard faces). Colour after useduet.io: warm near-black,
+   colour only for state. */
+:root {
+  --bg: #121313;
+  --raise: #181919;
+  --fg: #eef3f1;
+  --fg-2: #c9d0ce;
+  --text-2: #9aa29f;
+  --text-3: #737b78;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-2: rgba(255, 255, 255, 0.15);
+  --fill: rgba(255, 255, 255, 0.06);
+  --good: #32d74b;
+  --partial: #ff9f0a;
+  --bad: #ff6482;
+  --info: #4da3ff;
+  --missed: #da8fff;
+  --na: #5b605e;
+
+  --sans: Geist, -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: 72px; }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 400 14.5px/1.6 var(--sans); -webkit-font-smoothing: antialiased; font-feature-settings: "tnum" 0; }
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--line-2); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--fg); }
+button, select { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; border-radius: 4px; }
+h1, h2, h3, p { margin: 0; }
+em { font-style: italic; }
+.wrap { max-width: 1120px; margin-inline: auto; padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); }
+@media (max-width: 560px) { .wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); } }
+.label { font: 400 12px/1.4 var(--mono); color: var(--text-3); }
+.muted { color: var(--text-2); }
+.num { font-variant-numeric: tabular-nums; }
+.mono { font-family: var(--mono); font-size: 12px; }
+/* a case ID, boxed like rohsen's corner labels */
+.tag { display: inline-block; font: 400 11px/1 var(--mono); padding: 4px 6px 3px; border: 1px solid var(--line-2); border-radius: 3px; color: var(--fg-2); white-space: nowrap; vertical-align: 1px; }
+.g-good { --c: var(--good); } .g-partial { --c: var(--partial); } .g-bad { --c: var(--bad); } .g-na { --c: var(--na); } .g-info { --c: var(--info); } .g-missed { --c: var(--missed); }
+.glow, .pill, .w { color: var(--c); }
+.pill { font-weight: 500; white-space: nowrap; }
+
+/* Controls */
+.btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 999px; font-size: 13px; font-weight: 500; background: var(--fill); border: 1px solid var(--line-2); }
+.btn:hover { background: rgba(255, 255, 255, 0.1); }
+.btn.primary { background: var(--fg); color: #121313; border-color: var(--fg); }
+.btn.primary:hover { background: #fff; }
+.btn:disabled { opacity: 0.45; cursor: default; }
+.segment { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; border: 1px solid var(--line-2); flex-wrap: wrap; }
+.segment button { padding: 5px 12px; border-radius: 999px; font-size: 12.5px; color: var(--text-2); }
+.segment button[aria-pressed="true"] { background: var(--fg); color: #121313; font-weight: 500; }
+select { width: 100%; padding: 9px 32px 9px 12px; border-radius: 8px; border: 1px solid var(--line-2); background: var(--raise); font-size: 13.5px; appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--text-2) 50%), linear-gradient(135deg, var(--text-2) 50%, transparent 50%);
+  background-position: calc(100% - 16px) 52%, calc(100% - 11px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
+select:focus { outline: none; border-color: rgba(255, 255, 255, 0.4); }
+.check { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg-2); cursor: pointer; }
+.check input { accent-color: var(--fg); }
+
+/* Nav: a plain bar, like Duet's */
+.topnav { position: sticky; top: 0; z-index: 10; background: rgba(18, 19, 19, 0.82); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border-bottom: 1px solid var(--line); padding-top: env(safe-area-inset-top, 0px); }
+.topnav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 20px; height: 56px; }
+.topnav .brand { font: 600 14.5px/1 var(--sans); letter-spacing: -0.01em; white-space: nowrap; }
+.topnav nav { display: flex; gap: 22px; overflow-x: auto; scrollbar-width: none; }
+.topnav nav a { text-decoration: none; font-size: 13.5px; color: var(--text-2); white-space: nowrap; }
+.topnav nav a:hover { color: var(--fg); }
+.topnav nav a span { font: 11px var(--mono); color: var(--text-3); margin-right: 6px; }
+@media (max-width: 720px) { .topnav .brand { display: none; } .topnav nav { gap: 16px; } }
+
+/* Header */
+header { padding-block: 88px 56px; border-bottom: 1px solid var(--line); }
+header .wrap { display: grid; gap: 22px; }
+h1 { font: 600 clamp(38px, 5vw, 60px)/1.05 var(--sans); letter-spacing: -0.04em; max-width: 16ch; text-wrap: balance; }
+h1 em, h2 em { font-style: normal; color: var(--text-2); }
+.lede { max-width: 62ch; color: var(--fg-2); font-size: 17px; }
+.meta { display: flex; flex-wrap: wrap; gap: 6px 22px; font: 12px var(--mono); color: var(--text-2); }
+.key { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); border-top: 1px solid var(--line); margin-top: 26px; }
+.key > div { padding: 22px 24px 0 0; display: grid; gap: 6px; align-content: start; }
+.key > div + div { padding-left: 24px; border-left: 1px solid var(--line); }
+.key .big { font: 600 clamp(36px, 4vw, 48px)/1 var(--sans); letter-spacing: -0.04em; font-variant-numeric: tabular-nums; }
+.key .big small { font-size: 0.45em; color: var(--text-2); letter-spacing: 0; }
+.key p { color: var(--fg-2); font-size: 14px; max-width: 34ch; }
+@media (max-width: 760px) { .key { grid-template-columns: minmax(0, 1fr); } .key > div + div { padding-left: 0; border-left: 0; border-top: 1px solid var(--line); margin-top: 22px; } }
+
+/* Sections: a mono index on the left, the question on the right */
+section { padding-block: 72px; border-bottom: 1px solid var(--line); }
+.sec-head { display: grid; grid-template-columns: 200px minmax(0, 1fr) auto; gap: 14px 32px; align-items: start; margin-bottom: 36px; }
+.sec-head .idx { display: grid; gap: 4px; padding-top: 10px; }
+.sec-head .idx b { font: 400 13px var(--mono); color: var(--fg-2); }
+.sec-head h2 { font: 600 clamp(24px, 2.6vw, 32px)/1.15 var(--sans); letter-spacing: -0.03em; text-wrap: balance; }
+.sec-head p { color: var(--text-2); font-size: 15px; max-width: 62ch; margin-top: 12px; }
+.sec-head .tools { align-self: end; }
+@media (max-width: 860px) { .sec-head { grid-template-columns: minmax(0, 1fr); } .sec-head .idx { padding-top: 0; grid-auto-flow: column; justify-content: start; gap: 12px; } }
+.note { color: var(--text-2); font-size: 13.5px; max-width: 78ch; margin-top: 18px; }
+
+/* 1 · Health */
+.chart-box { position: relative; height: 380px; }
+.legend-row { display: flex; flex-wrap: wrap; gap: 8px 20px; font-size: 13px; color: var(--text-2); margin-bottom: 12px; }
+.legend-row span { display: inline-flex; align-items: center; gap: 8px; }
+.legend-row i { width: 10px; height: 10px; border-radius: 2px; background: var(--c); }
+.rates { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 28px; border-top: 1px solid var(--line); }
+.rates > div { padding: 18px 18px 0 0; display: grid; gap: 4px; }
+.rates > div + div { padding-left: 18px; border-left: 1px solid var(--line); }
+.rates .v { font: 600 28px/1.1 var(--sans); letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.rates .s { font-size: 13px; color: var(--text-2); }
+@media (max-width: 860px) { .rates { grid-template-columns: repeat(2, minmax(0, 1fr)); } .rates > div:nth-child(3) { padding-left: 0; border-left: 0; } }
+@media (max-width: 520px) { .rates { grid-template-columns: minmax(0, 1fr); } .rates > div + div { padding-left: 0; border-left: 0; } }
+.detail { margin-top: 30px; border-top: 1px solid var(--line); padding-top: 18px; }
+.detail-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; margin-bottom: 8px; }
+.detail-head h3 { font: 600 17px/1.2 var(--sans); letter-spacing: -0.01em; }
+.runs .r { display: grid; grid-template-columns: 150px 70px 70px minmax(0, 1fr) 50px; gap: 12px; align-items: baseline; padding: 9px 0; border-top: 1px solid var(--line); font-size: 13.5px; }
+.runs .r:first-child { border-top: 0; }
+.runs .r .mono { color: var(--text-2); }
+@media (max-width: 700px) { .runs .r { grid-template-columns: 1fr 1fr; } .runs .r > :nth-child(4) { grid-column: 1 / -1; } }
+
+/* 2 · Consistency */
+.cons-table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 560px; }
+.cons-table th { text-align: left; font: 400 11.5px var(--mono); color: var(--text-3); padding: 0 16px 10px 0; border-bottom: 1px solid var(--line-2); }
+.cons-table td { padding: 13px 16px 13px 0; border-bottom: 1px solid var(--line); vertical-align: middle; }
+.cons-table td .sub { display: block; font-size: 12.5px; color: var(--text-2); }
+.chip { font: 12px var(--mono); color: var(--c); }
+.tool { border-top: 1px solid var(--line-2); padding-top: 26px; margin-top: 34px; }
+.tool h3 { font: 600 17px/1.2 var(--sans); letter-spacing: -0.01em; margin-bottom: 16px; }
+.picker { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 10px; align-items: end; }
+.picker label { display: grid; gap: 6px; font: 11.5px var(--mono); color: var(--text-3); }
+.picker .swap { height: 40px; width: 40px; justify-content: center; padding: 0; }
+.tool-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.presets { display: flex; flex-wrap: wrap; gap: 6px; }
+.presets button { font-size: 12.5px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--line-2); color: var(--fg-2); }
+.presets button:hover { border-color: var(--text-2); color: var(--fg); }
+@media (max-width: 640px) { .picker { grid-template-columns: minmax(0, 1fr); } .picker .swap { justify-self: center; transform: rotate(90deg); } }
+.result { margin-top: 20px; }
+.result-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 18px; padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.result-head .stat { color: var(--text-2); }
+.result-head .stat b { color: var(--fg); font-weight: 500; }
+.diff { margin-top: 12px; border: 1px solid var(--line-2); border-radius: 8px; background: #0e0f0f; overflow: hidden; }
+.diff-cap { display: grid; grid-template-columns: 1fr 1fr; border-bottom: 1px solid var(--line-2); background: var(--raise); font: 12px var(--mono); }
+.diff-cap div { padding: 8px 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.diff-cap div + div, .sbs .pane + .pane, .sbs-head .pane + .pane { border-left: 1px solid var(--line-2); }
+.sbs-head, .sbs { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.sbs-head { border-bottom: 1px solid var(--line-2); background: var(--raise); }
+.sbs-head .pane { overflow: hidden; }
+.sbs { max-height: 560px; overflow-y: auto; }
+.sbs .pane { overflow-x: auto; overflow-y: hidden; }
+.diff table { border-collapse: collapse; table-layout: fixed; font: 12px var(--mono); }
+.diff th, .diff td { height: 28px; padding: 0 10px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid var(--line); }
+.diff th { font: 500 11.5px var(--sans); color: var(--text-2); }
+.diff th.only { color: var(--fg); background: rgba(255, 159, 10, 0.12); }
+.diff td.ln { color: var(--text-3); text-align: right; padding-right: 10px; user-select: none; }
+.diff tr.del td { background: rgba(255, 100, 130, 0.07); }
+.diff tr.add td { background: rgba(50, 215, 75, 0.06); }
+.diff tr.del td.x { background: rgba(255, 100, 130, 0.3); color: #fff; }
+.diff tr.add td.x { background: rgba(50, 215, 75, 0.26); color: #fff; }
+.diff tr.blank td { background: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255, 255, 255, 0.03) 5px 10px); }
+.diff tr.fold td { background: rgba(77, 163, 255, 0.06); color: var(--info); font-family: var(--sans); }
+.diff .empty { color: var(--text-2); padding: 18px; }
+.more { margin-top: 10px; }
+
+/* 3 · Heat map: seamless inferno cells with a colour bar */
+.heat-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 28px; align-items: start; }
+@media (max-width: 1100px) { .heat-wrap { grid-template-columns: minmax(0, 1fr); } }
+.heat-scroll { overflow-x: auto; }
+.heat-main { display: flex; gap: 16px; align-items: flex-start; }
+.heat-main .heat-scroll { flex: 1; min-width: 0; }
+.heat { border-collapse: collapse; width: 100%; min-width: 620px; }
+.heat th { font: 400 11px/1.35 var(--mono); color: var(--text-3); text-align: left; padding: 0 6px 12px; vertical-align: bottom; transition: color 0.15s; }
+.heat th.on { color: var(--fg); }
+.heat td { padding: 0; }
+.heat td.rowh { padding: 0 14px 0 0; white-space: nowrap; transition: opacity 0.15s; }
+.heat td.rowh .n { font-size: 14px; font-weight: 500; margin-top: 4px; }
+.heat td.gap, .heat th.gap { width: 10px; padding: 0; }
+.cellbtn { display: flex; align-items: center; justify-content: center; width: 100%; height: 56px; background: var(--c); position: relative; transition: opacity 0.15s; }
+.cellbtn[data-score="0"] { background: repeating-linear-gradient(135deg, #1d1f1f 0 6px, #151616 6px 12px); }
+.cellbtn:hover, .cellbtn[aria-pressed="true"] { outline: 2px solid #fff; outline-offset: -2px; z-index: 1; }
+.cellbtn .w2 { font-size: 11.5px; font-weight: 500; color: var(--ink); }
+.agg { height: 56px; display: flex; align-items: center; justify-content: center; background: var(--c); color: var(--ink); font: 400 13px var(--mono); }
+tr.avg td { padding-top: 10px; }
+tr.avg td.rowh .n { color: var(--text-2); }
+.heat.hovering .cellbtn:not(.hl), .heat.hovering td.rowh:not(.hl) { opacity: 0.45; }
+.cbar { display: flex; gap: 8px; flex: none; }
+.cbar .grad { width: 14px; }
+.cbar .ticks { display: flex; flex-direction: column; justify-content: space-between; font: 11px var(--mono); color: var(--text-2); }
+.cbar .ticks span { line-height: 1; }
+.na-key { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-2); margin-top: 14px; }
+.na-key i { width: 14px; height: 14px; background: repeating-linear-gradient(135deg, #2a2c2c 0 3px, #151616 3px 6px); }
+.heat-side { position: sticky; top: 80px; border-top: 1px solid var(--line-2); padding-top: 16px; display: grid; gap: 12px; min-height: 220px; }
+.heat-side h3 { font: 600 19px/1.25 var(--sans); letter-spacing: -0.02em; }
+.heat-side .why { color: var(--fg-2); font-size: 14.5px; }
+
+/* 4 · Time */
+.box-chart { width: 100%; min-width: 720px; height: auto; display: block; }
+.box-chart text { fill: var(--text-2); font: 12px var(--sans); }
+.box-chart text.id { font: 11px var(--mono); fill: var(--fg-2); }
+.box-chart .grid { stroke: var(--line); }
+.box-chart .axis { stroke: var(--line-2); }
+.box-chart circle { cursor: pointer; }
+.box-scroll { overflow-x: auto; }
+
+#tip { position: fixed; z-index: 30; pointer-events: none; max-width: 340px; padding: 10px 12px; border-radius: 8px; background: #1e1f1f; border: 1px solid var(--line-2); font-size: 12.5px; color: var(--fg-2); opacity: 0; transition: opacity 0.12s; }
+#tip b { color: var(--fg); font-weight: 500; }
+footer { padding-block: 40px 64px; color: var(--text-2); font-size: 13px; }
+footer .wrap { display: grid; gap: 10px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="topnav"><div class="wrap">
+  <span class="brand">Rhombus drift tests</span>
+  <nav aria-label="Sections"><a href="#health"><span>01</span>Pipeline health</a><a href="#consistency"><span>02</span>Consistency</a><a href="#heat"><span>03</span>Heat map</a><a href="#time"><span>04</span>Time</a></nav>
+</div></div>
+
+<header><div class="wrap">
+  <h1>What Rhombus does when the <em>data changes.</em></h1>
+  <p class="lede">I built an S3 → GCS pipeline with Rhombus's AI builder, then changed the data on purpose, first its structure <span class="tag">schema-drift1–5</span> and then its meaning <span class="tag">semantic-drift1–2</span>.</p>
+  <div class="meta"><span id="meta-counts"></span><span>Data as of 22 Oct 2026</span><a id="lnk-readme">README</a><a id="lnk-data">Raw run data</a></div>
+  <div class="key" id="summary"></div>
+</div></header>
+
+<section id="health"><div class="wrap">
+  <div class="sec-head">
+    <div class="idx"><b>01</b><span class="label">Pipeline health</span></div>
+    <div><h2>Which drifts <em>broke the run?</em></h2><p>Every run of the baseline and each drift case, by how it ended, with my validator's verdict after each bar. Click a bar to list its runs.</p></div>
+  </div>
+  <div class="legend-row" id="health-legend"></div>
+  <div class="chart-box"><canvas id="health-chart" aria-label="Drift runs per case, succeeded and failed"></canvas></div>
+  <div class="rates" id="rates"></div>
+  <div class="detail" id="detail"></div>
+  <p class="note">Runs that failed on export setup (switching the input cleared the GCS destination) aren't about the drift, so they're left out. They're in <a id="src-runs-2">rhombus-runs.csv</a>.</p>
+</div></section>
+
+<section id="consistency"><div class="wrap">
+  <div class="sec-head">
+    <div class="idx"><b>02</b><span class="label">Output consistency</span></div>
+    <div><h2>Same input, <em>same bytes?</em></h2><p>Repeat runs of the same input, compared by sha256. Below, compare any two files side by side.</p></div>
+  </div>
+  <div style="overflow-x:auto"><table class="cons-table" id="cons-table"></table></div>
+  <div class="tool">
+    <h3>Compare two files</h3>
+    <div class="picker">
+      <label for="left">Left<select id="left"></select></label>
+      <button type="button" class="btn swap" id="swap" aria-label="Swap left and right">⇄</button>
+      <label for="right">Right<select id="right"></select></label>
+    </div>
+    <div class="tool-row">
+      <div class="presets" id="presets"></div>
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap">
+        <label class="check" for="sort"><input type="checkbox" id="sort"> Ignore row order</label>
+        <button type="button" class="btn primary" id="run">Run</button>
+      </div>
+    </div>
+    <div class="result" id="result"></div>
+  </div>
+</div></section>
+
+<section id="heat"><div class="wrap">
+  <div class="sec-head">
+    <div class="idx"><b>03</b><span class="label">Capability heat map</span></div>
+    <div><h2>What Rhombus <em>handles,</em> and what breaks it</h2><p>Each drift case against what a customer needs. Click a cell for the reason.</p></div>
+    <div class="tools segment" role="group" aria-label="Filter drift cases" id="heat-filter">
+      <button type="button" data-f="all" aria-pressed="true">All</button>
+      <button type="button" data-f="Schema drift" aria-pressed="false">Schema 1–4</button>
+      <button type="button" data-f="Combined drift" aria-pressed="false">Schema 5</button>
+      <button type="button" data-f="Semantic drift" aria-pressed="false">Semantic 1–2</button>
+    </div>
+  </div>
+  <div class="heat-wrap">
+    <div>
+      <div class="heat-main"><div class="heat-scroll"><table class="heat" id="heat-table"></table></div>
+        <div class="cbar" id="cbar" aria-hidden="true"><div class="grad" id="cbar-grad"></div><div class="ticks"><span>1.0</span><span>.75</span><span>0.5</span><span>.25</span><span>0</span></div></div></div>
+      <p class="na-key">1 is handled, 0.5 partly, 0 fails. <i></i>Not applicable, left out of the averages.</p>
+    </div>
+    <aside class="heat-side" id="heat-side" aria-live="polite"></aside>
+  </div>
+</div></section>
+
+<section id="time"><div class="wrap">
+  <div class="sec-head">
+    <div class="idx"><b>04</b><span class="label">Execution time</span></div>
+    <div><h2>How long <em>each run took</em></h2><p>Seconds per run, from Rhombus's log timestamps. Every run is a dot; the box shows the middle half of a case's runs when it has three or more.</p></div>
+  </div>
+  <div class="box-scroll"><svg class="box-chart" id="box" role="img" aria-label="Box plot of execution time per case"></svg></div>
+  <p class="note">Drift runs take 5–27 s. The hollow dots at the top are the first run after a build (138 s and 153 s), when Rhombus writes each step's code. schema-drift1 and schema-drift2 only logged start times.</p>
+</div></section>
+
+<footer><div class="wrap">
+  <p>Every number here comes from the repo. Runs are in <a id="src-runs">rhombus-runs.csv</a>, repeat outputs in <a id="src-cons">consistency.csv</a> and validator verdicts in <a id="src-results">results/</a>. The diff tool loads <code>datasets/</code> and the downloaded GCS outputs. The heat map is my rating per case, each linked to its write-up. The page is built by <a id="src-builder">build_dashboard.py</a>.</p>
+</div></footer>
+<div id="tip" role="tooltip"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script>
+const DATA = {"scenarios": [{"id": "baseline", "short": "baseline", "label": "Baseline", "change": "no change", "family": "Baseline", "part": "", "writeup": "https://github.com/BlueZed15/rhomb/blob/main/observations/baseline.md", "result": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/results/baseline.json", "verdict": "FAIL", "reasons": ["2363 rows out, 2401 expected", "771 expected rows are missing or different", "733 output rows aren't in the expected output", "semantic check dates outside source month: 733", "semantic check fuel order violations: 2"], "expected_rows": 2401, "output_rows": 2363, "heat": null, "runs": [{"scenario": "baseline", "time": "2026-10-22 06:07", "trigger": "manual", "rhombus_result": "success", "stopped_at": "", "duration_s": "138", "counted": "yes", "note": "first passing build (prompt 5); the first run after a build writes each step's code", "source": "docs/setup/03-rhombus-pipeline.md#prompt-log", "first_after_build": true}, {"scenario": "baseline", "time": "2026-10-22 06:30", "trigger": "schedule", "rhombus_result": "success", "stopped_at": "", "duration_s": "", "counted": "yes", "note": "the scheduled baseline run (Rhombus doesn't show scheduled runs' duration)", "source": "observations/baseline.md", "first_after_build": false}, {"scenario": "baseline", "time": "2026-10-22 15:17:27", "trigger": "manual", "rhombus_result": "success", "stopped_at": "", "duration_s": "14", "counted": "yes", "note": "check after rebuilding in a clean project (prompt 6)", "source": "docs/prompts/06-rebuild-clean-baseline.md", "first_after_build": false}, {"scenario": "baseline", "time": "2026-10-22 16:34:58", "trigger": "apply", "rhombus_result": "success", "stopped_at": "", "duration_s": "8", "counted": "yes", "note": "check after rebuilding before schema-drift5 (prompt 7)", "source": "docs/prompts/07-rebuild-before-schema-drift5.md", "first_after_build": false}, {"scenario": "baseline", "time": "2026-10-22 18:07:28", "trigger": "apply", "rhombus_result": "success", "stopped_at": "", "duration_s": "153", "counted": "yes", "note": "check after rebuilding before semantic-drift1 (prompt 7); the first run after a build writes each step's code", "source": "docs/prompts/07-rebuild-before-schema-drift5.md", "first_after_build": true}], "consistency": [{"file": "output_baseline_0607.csv", "time": "2026-10-22 06:07", "pipeline": "original build in drift1 (prompts 1-5)", "sha": "503fd6ed186a"}, {"file": "output_baseline.csv", "time": "2026-10-22 06:30 (scheduled)", "pipeline": "original build in drift1 (prompts 1-5)", "sha": "503fd6ed186a"}, {"file": "output_baseline_1517.csv", "time": "2026-10-22 15:17", "pipeline": "rebuilt in fuelcheck-baseline (prompt 6)", "sha": "503fd6ed186a"}, {"file": "output_baseline_1635.csv", "time": "2026-10-22 16:35", "pipeline": "rebuilt again (prompt 7)", "sha": "503fd6ed186a"}, {"file": "output_baseline_1810.csv", "time": "2026-10-22 18:10", "pipeline": "rebuilt again (prompt 7; every step an LLM step)", "sha": "503fd6ed186a"}]}, {"id": "schema-drift1-drop-column", "short": "schema-drift1", "label": "Drop column", "change": "Brand removed", "family": "Schema drift", "part": "Part 2", "writeup": "https://github.com/BlueZed15/rhomb/blob/main/observations/schema-drift1-drop-column.md", "result": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/results/schema-drift1-drop-column.json", "verdict": "FAIL", "reasons": ["input columns changed: Brand removed", "no output was written"], "expected_rows": null, "output_rows": null, "heat": {"verdict": "breaks", "summary": "Stops with a clear error; nothing gets fixed", "cells": {"detects": {"score": 3, "why": "Stops at the step that uses Brand."}, "cause": {"score": 3, "why": "The error names the step and the missing column."}, "data": {"score": 3, "why": "Nothing is written, so no wrong data reaches GCS."}, "chatbot": {"score": 1, "why": "Wrong diagnosis, and its edit never changed the code that runs (same code_sha)."}, "schedule": {"score": 1, "why": "Skipped as \"unchanged data\"; the failure isn't in its history."}}}, "runs": [{"scenario": "schema-drift1-drop-column", "time": "2026-10-22 14:06:40", "trigger": "apply", "rhombus_result": "failed", "stopped_at": "brand_case_fix", "duration_s": "", "counted": "yes", "note": "Column 'Brand' does not exist", "source": "observations/schema-drift1-drop-column.md", "first_after_build": false}, {"scenario": "schema-drift1-drop-column", "time": "", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "brand_case_fix", "duration_s": "", "counted": "yes", "note": "re-run after the chatbot's fix: same error and same code_sha", "source": "observations/schema-drift1-drop-column.md", "first_after_build": false}], "consistency": []}, {"id": "schema-drift2-rename-column", "short": "schema-drift2", "label": "Rename column", "change": "Price → PriceCentsPerLitre", "family": "Schema drift", "part": "Part 2", "writeup": "https://github.com/BlueZed15/rhomb/blob/main/observations/schema-drift2-rename-column.md", "result": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/results/schema-drift2-rename-column.json", "verdict": "FAIL", "reasons": ["input columns changed: Price removed, PriceCentsPerLitre added", "no output was written"], "expected_rows": null, "output_rows": null, "heat": {"verdict": "breaks", "summary": "Stops with a clear error; nothing gets fixed", "cells": {"detects": {"score": 3, "why": "Stops at the first step that uses Price."}, "cause": {"score": 3, "why": "The error names the step and the missing column."}, "data": {"score": 3, "why": "Nothing is written."}, "chatbot": {"score": 1, "why": "Right diagnosis, but the code that runs never changed (same code_sha)."}, "schedule": {"score": 1, "why": "Skipped as \"unchanged data\"."}}}, "runs": [{"scenario": "schema-drift2-rename-column", "time": "2026-10-22 14:17:40", "trigger": "apply", "rhombus_result": "failed", "stopped_at": "drop_empty_price_fuelcode", "duration_s": "", "counted": "yes", "note": "Column 'Price' does not exist", "source": "observations/schema-drift2-rename-column.md", "first_after_build": false}, {"scenario": "schema-drift2-rename-column", "time": "2026-10-22 14:20:45", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "drop_empty_price_fuelcode", "duration_s": "", "counted": "yes", "note": "re-run after the chatbot's fix: same error and same code_sha", "source": "observations/schema-drift2-rename-column.md", "first_after_build": false}], "consistency": []}, {"id": "schema-drift3-change-type", "short": "schema-drift3", "label": "Change type", "change": "2174 → NSW 2174", "family": "Schema drift", "part": "Part 2", "writeup": "https://github.com/BlueZed15/rhomb/blob/main/observations/schema-drift3-change-type.md", "result": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/results/schema-drift3-change-type.json", "verdict": "FAIL", "reasons": ["no output was written"], "expected_rows": 0, "output_rows": null, "heat": {"verdict": "breaks", "summary": "Stops, but blames a step two places later", "cells": {"detects": {"score": 2, "why": "Only a passing popup: \"postcode_clean: No results found\"."}, "cause": {"score": 1, "why": "The error names dedup_final, two steps after the real cause."}, "data": {"score": 3, "why": "Nothing is written."}, "chatbot": {"score": 1, "why": "Blamed date_format; its fix failed."}, "schedule": {"score": 1, "why": "The schedule never re-reads the file (seen in schema-drift1 and schema-drift2)."}}}, "runs": [{"scenario": "schema-drift3-change-type", "time": "2026-10-22 15:29:43", "trigger": "apply", "rhombus_result": "failed", "stopped_at": "suburb_title_case", "duration_s": "9", "counted": "yes", "note": "switching the input wiped the step's settings", "source": "observations/schema-drift3-change-type.md", "first_after_build": false}, {"scenario": "schema-drift3-change-type", "time": "2026-10-22 15:31:56", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "dedup_final", "duration_s": "7", "counted": "yes", "note": "switching the input wiped the step's settings", "source": "observations/schema-drift3-change-type.md", "first_after_build": false}, {"scenario": "schema-drift3-change-type", "time": "2026-10-22 15:34:26", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "dedup_final", "duration_s": "8", "counted": "yes", "note": "DataFrame should not be empty (every row dropped at postcode_clean)", "source": "observations/schema-drift3-change-type.md", "first_after_build": false}, {"scenario": "schema-drift3-change-type", "time": "2026-10-22 15:37:38", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "dedup_final", "duration_s": "5", "counted": "yes", "note": "re-run after the chatbot's fix: same error", "source": "observations/schema-drift3-change-type.md", "first_after_build": false}], "consistency": []}, {"id": "schema-drift4-add-column", "short": "schema-drift4", "label": "Add column", "change": "new IsDiscounted", "family": "Schema drift", "part": "Part 2", "writeup": "https://github.com/BlueZed15/rhomb/blob/main/observations/schema-drift4-add-column.md", "result": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/results/schema-drift4-add-column.json", "verdict": "FAIL", "reasons": ["input columns changed: IsDiscounted added", "2363 rows out, 2458 expected", "828 expected rows are missing or different", "733 output rows aren't in the expected output", "semantic check dates outside source month: 733", "semantic check fuel order violations: 2"], "expected_rows": 2458, "output_rows": 2363, "heat": {"verdict": "handled", "summary": "The new column flows through; the chatbot's later fix loses rows", "cells": {"detects": {"score": 2, "why": "The new column passes through without a warning."}, "cause": {"score": 2, "why": "The errors were about wiped step settings, not the column."}, "data": {"score": 1, "why": "After the chatbot's fixes, 57 rows are silently missing."}, "chatbot": {"score": 1, "why": "4 prompts; its replacement steps had empty prompts."}, "schedule": {"score": 1, "why": "The schedule never re-reads the file."}}}, "runs": [{"scenario": "schema-drift4-add-column", "time": "2026-10-22 15:53:33", "trigger": "apply", "rhombus_result": "failed", "stopped_at": "suburb_title_case", "duration_s": "6", "counted": "yes", "note": "switching the input wiped the step's settings", "source": "observations/schema-drift4-add-column.md", "first_after_build": false}, {"scenario": "schema-drift4-add-column", "time": "2026-10-22 15:55:11", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "suburb_title_case", "duration_s": "5", "counted": "yes", "note": "the chatbot's replacement step had an empty prompt", "source": "observations/schema-drift4-add-column.md", "first_after_build": false}, {"scenario": "schema-drift4-add-column", "time": "2026-10-22 15:56:41", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "dedup_final", "duration_s": "24", "counted": "yes", "note": "switching the input wiped the step's settings", "source": "observations/schema-drift4-add-column.md", "first_after_build": false}, {"scenario": "schema-drift4-add-column", "time": "2026-10-22 15:58:03", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "dedup_final", "duration_s": "11", "counted": "yes", "note": "the chatbot's replacement step had an empty prompt", "source": "observations/schema-drift4-add-column.md", "first_after_build": false}, {"scenario": "schema-drift4-add-column", "time": "2026-10-22 15:59:19", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "gcs_export", "duration_s": "22", "counted": "no", "note": "export destination lost (setup; not counted)", "source": "observations/schema-drift4-add-column.md", "first_after_build": false}, {"scenario": "schema-drift4-add-column", "time": "2026-10-22 16:01:33", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "gcs_export", "duration_s": "9", "counted": "no", "note": "export destination (setup; not counted)", "source": "observations/schema-drift4-add-column.md", "first_after_build": false}, {"scenario": "schema-drift4-add-column", "time": "2026-10-22 16:15:54", "trigger": "apply", "rhombus_result": "success", "stopped_at": "", "duration_s": "15", "counted": "yes", "note": "57 rows short of expected (the chatbot's dedup ignores the new column)", "source": "observations/schema-drift4-add-column.md", "first_after_build": false}, {"scenario": "schema-drift4-add-column", "time": "2026-10-22 16:15:58", "trigger": "apply", "rhombus_result": "success", "stopped_at": "", "duration_s": "11", "counted": "yes", "note": "second run started by the same Apply; byte-identical output", "source": "observations/schema-drift4-add-column.md", "first_after_build": false}], "consistency": [{"file": "output_schema-drift4-add-column.csv", "time": "2026-10-22 16:16", "pipeline": "schema-drift4 pipeline (after the chatbot's fixes)", "sha": "0c977f10f067"}, {"file": "output_schema-drift4-add-column_b.csv", "time": "2026-10-22 16:16 (second run, same Apply)", "pipeline": "schema-drift4 pipeline (after the chatbot's fixes)", "sha": "0c977f10f067"}]}, {"id": "schema-drift5-combined", "short": "schema-drift5", "label": "All four at once", "change": "every schema change", "family": "Combined drift", "part": "Part 2", "writeup": "https://github.com/BlueZed15/rhomb/blob/main/observations/schema-drift5-combined.md", "result": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/results/schema-drift5-combined.json", "verdict": "FAIL", "reasons": ["input columns changed: Brand removed, Price removed, IsDiscounted added, PriceCentsPerLitre added", "the output has 0 rows"], "expected_rows": null, "output_rows": 0, "heat": {"verdict": "breaks", "summary": "Fails one column at a time, then \"succeeds\" with an empty file", "cells": {"detects": {"score": 2, "why": "Stops, but reports one column at a time."}, "cause": {"score": 2, "why": "Each error names one column; the first is a bare KeyError."}, "data": {"score": 1, "why": "\"Success\" with a header-only file, 0 rows."}, "chatbot": {"score": 1, "why": "Looked at the wrong file; its fixes made the failure silent."}, "schedule": {"score": 1, "why": "A scheduled run would report success."}}}, "runs": [{"scenario": "schema-drift5-combined", "time": "2026-10-22 16:38:17", "trigger": "apply", "rhombus_result": "failed", "stopped_at": "drop_empty_price_fuel", "duration_s": "10", "counted": "yes", "note": "bare KeyError 'Price'", "source": "observations/schema-drift5-combined.md", "first_after_build": false}, {"scenario": "schema-drift5-combined", "time": "2026-10-22 16:40:12", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "brand_normalise", "duration_s": "27", "counted": "yes", "note": "Column 'Brand' does not exist", "source": "observations/schema-drift5-combined.md", "first_after_build": false}, {"scenario": "schema-drift5-combined", "time": "2026-10-22 16:45:14", "trigger": "manual", "rhombus_result": "failed", "stopped_at": "gcs_export", "duration_s": "93", "counted": "no", "note": "export destination lost (setup; not counted)", "source": "observations/schema-drift5-combined.md", "first_after_build": false}, {"scenario": "schema-drift5-combined", "time": "2026-10-22 16:48:30", "trigger": "apply", "rhombus_result": "success", "stopped_at": "", "duration_s": "9", "counted": "yes", "note": "\"success\" with a header-only file (0 rows)", "source": "observations/schema-drift5-combined.md", "first_after_build": false}], "consistency": []}, {"id": "semantic-drift1-cents-to-dollars", "short": "semantic-drift1", "label": "Cents → dollars", "change": "253.9 → 2.539", "family": "Semantic drift", "part": "Part 3", "writeup": "https://github.com/BlueZed15/rhomb/blob/main/observations/semantic-drift1-cents-to-dollars.md", "result": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/results/semantic-drift1-cents-to-dollars.json", "verdict": "FAIL", "reasons": ["the output has 0 rows", "0 rows out, 38 expected", "38 expected rows are missing or different"], "expected_rows": 38, "output_rows": 0, "heat": {"verdict": "missed", "summary": "Reports success and writes 0 rows", "cells": {"detects": {"score": 2, "why": "A passing \"No results found\" popup, nothing about units."}, "cause": {"score": 1, "why": "No error at all."}, "data": {"score": 1, "why": "\"Success\" with 0 rows."}, "chatbot": {"score": 0, "why": "Nothing failed, so there was nothing to give it."}, "schedule": {"score": 1, "why": "A scheduled run would be green."}}}, "runs": [{"scenario": "semantic-drift1-cents-to-dollars", "time": "2026-10-22 18:57:35", "trigger": "apply", "rhombus_result": "failed", "stopped_at": "gcs_export", "duration_s": "13", "counted": "no", "note": "export destination lost (setup; not counted)", "source": "observations/semantic-drift1-cents-to-dollars.md", "first_after_build": false}, {"scenario": "semantic-drift1-cents-to-dollars", "time": "2026-10-22 18:59:17", "trigger": "apply", "rhombus_result": "success", "stopped_at": "", "duration_s": "10", "counted": "yes", "note": "\"success\" with a header-only file (0 rows)", "source": "observations/semantic-drift1-cents-to-dollars.md", "first_after_build": false}], "consistency": []}, {"id": "semantic-drift2-date-mmdd", "short": "semantic-drift2", "label": "Dates as MM/DD", "change": "17/09 → 09/17", "family": "Semantic drift", "part": "Part 3", "writeup": "https://github.com/BlueZed15/rhomb/blob/main/observations/semantic-drift2-date-mmdd.md", "result": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/results/semantic-drift2-date-mmdd.json", "verdict": "FAIL", "reasons": ["2363 rows out, 2394 expected", "2312 expected rows are missing or different", "2281 output rows aren't in the expected output", "semantic check fuel order violations: 2"], "expected_rows": 2394, "output_rows": 2363, "heat": {"verdict": "missed", "summary": "No warning; right only because Rhombus guesses month-first", "cells": {"detects": {"score": 1, "why": "No warning of any kind."}, "cause": {"score": 0, "why": "No error."}, "data": {"score": 2, "why": "Correct here by luck; the same guess swaps 733 Australian dates in the baseline."}, "chatbot": {"score": 0, "why": "Nothing failed."}, "schedule": {"score": 1, "why": "A scheduled run would be green."}}}, "runs": [{"scenario": "semantic-drift2-date-mmdd", "time": "2026-10-22 19:07:35", "trigger": "apply", "rhombus_result": "failed", "stopped_at": "gcs_export", "duration_s": "14", "counted": "no", "note": "export destination lost (setup; not counted)", "source": "observations/semantic-drift2-date-mmdd.md", "first_after_build": false}, {"scenario": "semantic-drift2-date-mmdd", "time": "2026-10-22 19:09:20", "trigger": "apply", "rhombus_result": "success", "stopped_at": "", "duration_s": "11", "counted": "yes", "note": "no warnings", "source": "observations/semantic-drift2-date-mmdd.md", "first_after_build": false}], "consistency": []}], "capabilities": [["detects", "Notices the change"], ["cause", "Error points at the cause"], ["data", "Data in GCS is right"], ["chatbot", "Chatbot fixes it alone"], ["schedule", "Schedule notices"]], "files": [{"group": "Inputs", "label": "baseline · input", "path": "../datasets/baseline.csv"}, {"group": "Inputs", "label": "baseline · answer key (correct cleaned output)", "path": "../datasets/baseline_expected.csv"}, {"group": "Inputs", "label": "schema-drift1 · drop column · input", "path": "../datasets/schema-drift1-drop-column.csv"}, {"group": "Inputs", "label": "schema-drift2 · rename column · input", "path": "../datasets/schema-drift2-rename-column.csv"}, {"group": "Inputs", "label": "schema-drift3 · change type · input", "path": "../datasets/schema-drift3-change-type.csv"}, {"group": "Inputs", "label": "schema-drift4 · add column · input", "path": "../datasets/schema-drift4-add-column.csv"}, {"group": "Inputs", "label": "schema-drift5 · all four at once · input", "path": "../datasets/schema-drift5-combined.csv"}, {"group": "Inputs", "label": "semantic-drift1 · cents → dollars · input", "path": "../datasets/semantic-drift1-cents-to-dollars.csv"}, {"group": "Inputs", "label": "semantic-drift2 · dates as MM/DD · input", "path": "../datasets/semantic-drift2-date-mmdd.csv"}, {"group": "Outputs", "label": "baseline · output", "path": "data/baseline.csv", "scenario": "baseline", "sha": "503fd6ed186a"}, {"group": "Outputs", "label": "schema-drift4 · add column · output", "path": "data/schema-drift4-add-column.csv", "scenario": "schema-drift4-add-column", "sha": "0c977f10f067"}, {"group": "Outputs", "label": "schema-drift5 · all four at once · output", "path": "data/schema-drift5-combined.csv", "scenario": "schema-drift5-combined", "sha": "90ef80923872"}, {"group": "Outputs", "label": "semantic-drift1 · cents → dollars · output", "path": "data/semantic-drift1-cents-to-dollars.csv", "scenario": "semantic-drift1-cents-to-dollars", "sha": "b2f1e4ce0eb5"}, {"group": "Outputs", "label": "semantic-drift2 · dates as MM/DD · output", "path": "data/semantic-drift2-date-mmdd.csv", "scenario": "semantic-drift2-date-mmdd", "sha": "de296e1882f1"}], "sources": {"consistency_csv": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/consistency.csv", "runs": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/rhombus-runs.csv", "consistency": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/consistency.csv", "results": "https://github.com/BlueZed15/rhomb/blob/main/data-validation/results", "builder": "https://github.com/BlueZed15/rhomb/blob/main/scripts/build_dashboard.py", "readme": "https://github.com/BlueZed15/rhomb/blob/main/README.md"}};
+const $ = (s, el = document) => el.querySelector(s);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const SCORE = { 3: ['good', 'Handled'], 2: ['partial', 'Partly'], 1: ['bad', 'Fails'], 0: ['na', 'n/a'] };
+const VERDICT = { handled: ['good', 'Handled'], breaks: ['bad', 'Breaks'], missed: ['missed', 'Missed'] };
+const tag = (s) => `<span class="tag">${esc(s.short)}</span>`;
+const DRIFT = DATA.scenarios.filter((s) => s.id !== 'baseline');
+const BASE = DATA.scenarios.find((s) => s.id === 'baseline');
+// Pipeline health shows the baseline first, as the spec asks, then every drift case.
+const HEALTH = [BASE, ...DRIFT];
+let selected = DRIFT[0].id;
+
+const tip = $('#tip');
+function showTip(e, html) {
+  tip.innerHTML = html; tip.style.opacity = 1;
+  const x = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 12);
+  const y = e.clientY + 18 + tip.offsetHeight > window.innerHeight ? e.clientY - tip.offsetHeight - 12 : e.clientY + 18;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+const hideTip = () => { tip.style.opacity = 0; };
+
+$('#lnk-readme').href = DATA.sources.readme; $('#lnk-data').href = DATA.sources.runs; $('#src-runs-2').href = DATA.sources.runs;
+$('#src-runs').href = DATA.sources.runs; $('#src-cons').href = DATA.sources.consistency_csv; $('#src-results').href = DATA.sources.results; $('#src-builder').href = DATA.sources.builder;
+const counted = (s) => s.runs.filter((r) => r.counted === 'yes');
+const ok = (r) => r.counted === 'yes' && r.rhombus_result === 'success';
+const failed = (r) => r.counted === 'yes' && r.rhombus_result !== 'success';
+
+/* Summary: three numbers */
+(function summary() {
+  const all = DRIFT.flatMap(counted);
+  const good = all.filter(ok).length;
+  const pass = DRIFT.filter((s) => s.verdict === 'PASS').length;
+  const greenWrong = DRIFT.filter((s) => s.runs.some(ok) && s.verdict !== 'PASS').length;
+  const repeats = BASE.consistency; const same = repeats.filter((c) => c.sha === repeats[0]?.sha).length;
+  $('#meta-counts').textContent = `${DRIFT.length} drift cases · ${all.length} drift runs`;
+  const fig = (big, small, text) => `<div><span class="big num">${big}<small> ${small}</small></span><p>${text}</p></div>`;
+  $('#summary').innerHTML =
+    fig(good, `of ${all.length}`, 'drift runs reported success in Rhombus.')
+    + fig(pass, `of ${DRIFT.length}`, `drift cases produced the right output. In ${greenWrong} of them a green run delivered wrong or empty data.`)
+    + fig(same, `of ${repeats.length}`, 'baseline re-runs gave byte-identical output, across 3 separate builds.');
+})();
+
+/* 1 · Pipeline health: drift cases only, stacked horizontal bars */
+Chart.defaults.font.family = css('--sans'); Chart.defaults.color = css('--text-2');
+// Writes "2 of 6 succeeded · 33%   output wrong" just past the end of each bar.
+const endLabels = {
+  id: 'endLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    ctx.save(); ctx.font = `400 12.5px ${css('--sans')}`; ctx.textBaseline = 'middle';
+    HEALTH.forEach((s, i) => {
+      let xEnd = chart.scales.x.getPixelForValue(0);
+      chart.data.datasets.forEach((d, di) => { const bar = chart.getDatasetMeta(di).data[i]; if (bar && d.data[i]) xEnd = Math.max(xEnd, bar.x); });
+      const y = chart.scales.y.getPixelForValue(i);
+      const rs = counted(s); const n = rs.filter(ok).length;
+      const t1 = `${n} of ${rs.length} succeeded · ${rs.length ? Math.round((100 * n) / rs.length) : 0}%`;
+      ctx.fillStyle = css('--fg-2'); ctx.fillText(t1, xEnd + 12, y);
+      const w = ctx.measureText(t1 + '    ').width;
+      ctx.fillStyle = s.verdict === 'PASS' ? css('--good') : css('--bad');
+      ctx.fillText(s.verdict === 'PASS' ? 'output right' : 'output wrong', xEnd + 12 + w, y);
+    });
+    ctx.restore();
+  },
+};
+const healthChart = new Chart($('#health-chart'), {
+  plugins: [endLabels],
+  type: 'bar',
+  data: { labels: [], datasets: [] },
+  options: {
+    indexAxis: 'y', responsive: true, maintainAspectRatio: false, animation: { duration: 350 },
+    layout: { padding: { right: 8 } },
+    scales: {
+      x: { stacked: true, beginAtZero: true, max: 10, ticks: { precision: 0, color: css('--text-3'), font: { family: css('--mono'), size: 11 }, callback: (v) => (v <= 6 ? v : '') },
+           grid: { color: (c) => (c.tick && c.tick.value > 6 ? 'transparent' : css('--line')) }, border: { color: css('--line-2') },
+           title: { display: true, text: 'runs', color: css('--text-3'), font: { family: css('--mono'), size: 11 } } },
+      y: { stacked: true, grid: { display: false }, border: { color: css('--line-2') }, ticks: { color: css('--fg-2'), font: { size: 13 }, padding: 10 } },
+    },
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#1e1f1f', borderColor: css('--line-2'), borderWidth: 1, padding: 11, titleColor: '#fff', bodyColor: css('--fg-2'), footerColor: css('--text-2'),
+        titleFont: { weight: 500 }, footerFont: { weight: 400 },
+        callbacks: {
+          title: (items) => { const s = HEALTH[items[0].dataIndex]; return `${s.short} · ${s.label}`; },
+          footer: (items) => {
+            const s = HEALTH[items[0].dataIndex]; const rs = counted(s);
+            return [`Success rate ${Math.round((100 * rs.filter(ok).length) / Math.max(1, rs.length))}%`, `${s.verdict} from my validator${s.reasons[0] ? ', ' + s.reasons[0] : ''}`, 'Click to list the runs'];
+          },
+        },
+      },
+    },
+    onClick: (e, els) => { if (els.length) { selected = HEALTH[els[0].index].id; renderDetail(); $('#detail').scrollIntoView({ behavior: 'smooth', block: 'nearest' }); } },
+    onHover: (e, els) => { e.native.target.style.cursor = els.length ? 'pointer' : 'default'; },
+  },
+});
+function renderHealth() {
+  healthChart.data.labels = HEALTH.map((s) => (s === BASE ? 'baseline   reference' : `${s.short}   ${s.label}`));
+  const ds = [
+    { label: 'Succeeded', data: HEALTH.map((s) => s.runs.filter(ok).length), backgroundColor: css('--good') },
+    { label: 'Failed', data: HEALTH.map((s) => s.runs.filter(failed).length), backgroundColor: css('--bad') },
+  ];
+  $('#health-legend').innerHTML = ds.map((d) => `<span><i style="--c:${d.backgroundColor}"></i>${d.label}</span>`).join('')
+    + `<span class="muted">"output right / wrong" is my validator's verdict</span>`;
+  healthChart.data.datasets = ds.map((d) => ({ ...d, borderRadius: 2, borderSkipped: false, barPercentage: 0.6, categoryPercentage: 0.9, borderColor: css('--bg'), borderWidth: 1 }));
+  healthChart.update();
+
+  const fams = [['Baseline', 'baseline · no change'], ['Schema drift', 'schema-drift1–4 · one change at a time'], ['Combined drift', 'schema-drift5 · all four at once'], ['Semantic drift', 'semantic-drift1–2 · changes in meaning']];
+  $('#rates').innerHTML = fams.map(([f, name]) => {
+    const sc = HEALTH.filter((s) => s.family === f); const rs = sc.flatMap(counted);
+    const n = rs.filter(ok).length; const rate = rs.length ? Math.round((100 * n) / rs.length) : 0;
+    const right = sc.filter((s) => s.verdict === 'PASS').length;
+    return `<div><span class="label">${name}</span><span class="v num">${rate}%<span class="muted" style="font:400 14px var(--sans)"> success</span></span><span class="s">${n} of ${rs.length} runs · output right in ${right} of ${sc.length}</span></div>`;
+  }).join('');
+  renderDetail();
+}
+function renderDetail() {
+  const s = DATA.scenarios.find((x) => x.id === selected);
+  const rows = counted(s).map((r) => `<div class="r">
+    <span class="mono">${esc(r.time || 'time not logged')}</span><span class="muted">${esc(r.trigger)}</span>
+    <span class="${ok(r) ? 'g-good' : 'g-bad'} glow">${esc(r.rhombus_result)}</span>
+    <span>${r.stopped_at ? `stopped at <span class="mono">${esc(r.stopped_at)}</span> · ` : ''}${esc(r.note)}</span>
+    <span class="mono num" style="text-align:right">${r.duration_s ? r.duration_s + ' s' : ''}</span></div>`).join('');
+  $('#detail').innerHTML = `<div class="detail-head"><span class="label">Runs of</span>${tag(s)}<h3>${esc(s.label)}</h3><span class="muted" style="font-size:13px">${esc(s.change)}</span>
+    <span class="pill g-${s.verdict === 'PASS' ? 'good' : 'bad'}">Validator ${esc(s.verdict)}</span><a href="${s.writeup}" style="font-size:13px">Write-up</a></div>
+    <div class="runs">${rows}</div>${s.reasons.length ? `<p class="note" style="margin-top:10px">My validator flagged ${s.reasons.map(esc).join('; ')}.</p>` : ''}`;
+}
+
+/* 2 · Output consistency: repeat runs from consistency.csv, then a side-by-side table diff */
+(function consTable() {
+  const rows = DATA.scenarios.filter((s) => DATA.files.some((f) => f.scenario === s.id)).map((s) => {
+    const reps = s.consistency.length ? s.consistency : [{ sha: DATA.files.find((f) => f.scenario === s.id).sha }];
+    const shas = [...new Set(reps.map((c) => c.sha))]; const same = shas.length === 1;
+    const verdict = reps.length < 2 ? '<span class="pill g-na">Ran once</span>' : same ? '<span class="pill g-good">Identical every time</span>' : '<span class="pill g-bad">Varies</span>';
+    const builds = new Set(reps.map((c) => (c.pipeline || '').replace(/ \(.*/, '').replace(/again.*/, 'again'))).size;
+    const sub = s.id === 'baseline' && reps.length > 1 ? `across ${builds} separate builds of the pipeline` : reps.length > 1 ? 'both from the same Apply' : '';
+    return `<tr><td>${tag(s)} <b style="font-weight:500">${esc(s.label)}</b></td><td class="num">${reps.length}${sub ? `<span class="sub">${sub}</span>` : ''}</td><td>${verdict}</td><td>${shas.map((h) => `<span class="chip g-${reps.length > 1 && same ? 'good' : 'na'}">${h}</span>`).join(' ')}</td></tr>`;
+  });
+  $('#cons-table').innerHTML = `<thead><tr><th>Case</th><th>Outputs saved</th><th>Same output?</th><th>sha256 of the output</th></tr></thead><tbody>${rows.join('')}</tbody>`
+    + `<tfoot><tr><td colspan="4" class="muted" style="font-size:13px;border:0;padding-top:14px">schema-drift1–3 wrote nothing. I didn't repeat drift cases, since each run costs credits and a manual re-import.</td></tr></tfoot>`;
+})();
+const sel = { left: $('#left'), right: $('#right') };
+for (const el of Object.values(sel)) {
+  el.innerHTML = ['Outputs', 'Inputs'].map((g) => `<optgroup label="${g}">${DATA.files.filter((f) => f.group === g).map((f) => `<option value="${f.path}">${esc(f.label)}</option>`).join('')}</optgroup>`).join('');
+}
+const PRESETS = [
+  ['Answer key vs baseline output', '../datasets/baseline_expected.csv', 'data/baseline.csv', true],
+  ['baseline vs schema-drift5 output', 'data/baseline.csv', 'data/schema-drift5-combined.csv', false],
+  ['Answer key vs semantic-drift2 output', '../datasets/baseline_expected.csv', 'data/semantic-drift2-date-mmdd.csv', true],
+  ['baseline input vs its output', '../datasets/baseline.csv', 'data/baseline.csv', true],
+].filter(([, l, r]) => [l, r].every((p) => DATA.files.some((f) => f.path === p)));
+$('#presets').innerHTML = PRESETS.map(([l], i) => `<button type="button" data-i="${i}">${esc(l)}</button>`).join('');
+$('#presets').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return;
+  const [, l, r, s] = PRESETS[+b.dataset.i]; sel.left.value = l; sel.right.value = r; $('#sort').checked = s; runDiff();
+});
+$('#swap').addEventListener('click', () => { [sel.left.value, sel.right.value] = [sel.right.value, sel.left.value]; });
+$('#run').addEventListener('click', runDiff);
+
+const cache = {};
+async function load(path) {
+  if (!cache[path]) {
+    const res = await fetch(path);
+    if (!res.ok) throw new Error(`Couldn't load ${path} (${res.status}).`);
+    cache[path] = (await res.text()).replace(/\r\n/g, '\n').replace(/\n$/, '');
+  }
+  return cache[path];
+}
+async function sha(text) {
+  try { const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text + '\n')); return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('').slice(0, 12); }
+  catch { return 'n/a'; }
+}
+// A small CSV parser (quoted fields, doubled quotes), enough for one line at a time.
+function cells(line) {
+  const out = []; let f = '', q = false;
+  for (let i = 0; i < line.length; i++) {
+    const c = line[i];
+    if (q) { if (c === '"') { if (line[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true; else if (c === ',') { out.push(f); f = ''; } else f += c;
+  }
+  out.push(f); return out;
+}
+/* The diff works on rows, not lines. Rows are matched on the columns both files share, so an extra or missing
+   column doesn't turn every row into a change; that column is flagged in the header instead. */
+let D = null, D0 = null; let shown = 0; let allCols = false;
+async function runDiff() {
+  const btn = $('#run'); btn.disabled = true; btn.textContent = 'Comparing…';
+  const out = $('#result'); const label = (p) => DATA.files.find((f) => f.path === p)?.label || p;
+  try {
+    const [a, b] = await Promise.all([load(sel.left.value), load(sel.right.value)]);
+    const [ha, hb] = await Promise.all([sha(a), sha(b)]);
+    if (a === b) {
+      out.innerHTML = `<div class="result-head"><span class="pill g-good">Identical</span><span class="stat"><b>${(a.split('\n').length - 1).toLocaleString()}</b> rows each</span><span class="stat">sha256 <span class="chip g-good">${ha}</span></span></div>
+        <div class="diff"><div class="empty">No differences: every row of <b>${esc(label(sel.left.value))}</b> matches <b>${esc(label(sel.right.value))}</b>.</div></div>`;
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 30)); // let "Comparing…" paint before the diff runs
+    const [headA, ...linesA] = a.split('\n'), [headB, ...linesB] = b.split('\n');
+    const L = cells(headA), R = cells(headB);
+    const shared = L.filter((n) => R.includes(n));
+    const keyOf = (row, names) => shared.map((n) => row[names.indexOf(n)]).join('\u0001');
+    let A = linesA.map((l) => { const c = cells(l); return { c, k: keyOf(c, L) }; });
+    let B = linesB.map((l) => { const c = cells(l); return { c, k: keyOf(c, R) }; });
+    A.forEach((x, i) => { x.n = i + 1; }); B.forEach((x, i) => { x.n = i + 1; });
+    if ($('#sort').checked) { const by = (x, y) => (x.k < y.k ? -1 : x.k > y.k ? 1 : 0); A = [...A].sort(by); B = [...B].sort(by); }
+    D0 = { shared, li: shared.map((n) => L.indexOf(n)), ri: shared.map((n) => R.indexOf(n)) };
+    const rows = align(myers(A.map((x) => x.k), B.map((x) => x.k)), A, B);
+    // columns worth showing: the first (it names the station), anything that differs, anything only in one file
+    const diffCols = new Set([shared[0]]);
+    rows.filter((x) => x.t === 'mod').forEach((x) => shared.forEach((n) => { if (x.l.c[L.indexOf(n)] !== x.r.c[R.indexOf(n)]) diffCols.add(n); }));
+    L.concat(R).forEach((n) => { if (!shared.includes(n)) diffCols.add(n); });
+    D = { L, R, shared, rows, diffCols, labels: [label(sel.left.value), label(sel.right.value)] };
+    const mod = rows.filter((x) => x.t === 'mod').length;
+    const del = rows.filter((x) => x.t === 'del').length, add = rows.filter((x) => x.t === 'add').length;
+    const extra = [...L.filter((n) => !R.includes(n)).map((n) => `${n} only on the left`), ...R.filter((n) => !L.includes(n)).map((n) => `${n} only on the right`)];
+    out.innerHTML = `<div class="result-head"><span class="pill g-bad">Different</span>
+      <span class="stat"><b>${mod.toLocaleString()}</b> rows changed</span>
+      <span class="stat"><b class="g-bad glow">${del.toLocaleString()}</b> rows only on the left</span>
+      <span class="stat"><b class="g-good glow">${add.toLocaleString()}</b> rows only on the right</span>
+      ${extra.length ? `<span class="stat">column ${extra.map(esc).join(', ')}</span>` : ''}
+      <span class="stat">sha256 <span class="chip g-bad">${ha}</span> / <span class="chip g-bad">${hb}</span></span>
+      <label class="check" for="allcols" style="margin-left:auto"><input type="checkbox" id="allcols"${allCols ? ' checked' : ''}> All columns</label></div>
+      <div id="diff-view"></div>`;
+    $('#allcols').addEventListener('change', (e) => { allCols = e.target.checked; renderDiffView(); });
+    renderDiffView();
+  } catch (err) {
+    out.innerHTML = `<div class="result-head"><span class="pill g-bad">Couldn't compare</span><span class="stat">${esc(err.message)} Open the dashboard from a web server (GitHub Pages, or <span class="mono">python -m http.server</span> in the repo root), not as a local file.</span></div>`;
+  } finally { btn.disabled = false; btn.textContent = 'Run'; }
+}
+// Myers' diff over rows, returning parts ({count, added, removed}). Rows become integers first, and within each
+// changed stretch the removed rows come before the added ones. The jsdiff library took ~9 s on these files; this takes ~0.2 s.
+function myers(xs, ys) {
+  const ids = new Map(); const id = (k) => { if (!ids.has(k)) ids.set(k, ids.size); return ids.get(k); };
+  const a = Int32Array.from(xs, id), b = Int32Array.from(ys, id); const N = a.length, M = b.length, MAX = N + M, off = MAX + 1;
+  const V = new Int32Array(2 * MAX + 3); const trace = []; let D = 0;
+  outer: for (let d = 0; d <= MAX; d++) {
+    trace.push(V.slice(off - d - 1, off + d + 2));
+    for (let k = -d; k <= d; k += 2) {
+      let x = k === -d || (k !== d && V[off + k - 1] < V[off + k + 1]) ? V[off + k + 1] : V[off + k - 1] + 1; let y = x - k;
+      while (x < N && y < M && a[x] === b[y]) { x++; y++; }
+      V[off + k] = x;
+      if (x >= N && y >= M) { D = d; break outer; }
+    }
+  }
+  const ops = []; let x = N, y = M;
+  for (let d = D; d > 0; d--) {
+    const v = trace[d]; const at = (k) => v[k + d + 1]; const k = x - y;
+    const pk = k === -d || (k !== d && at(k - 1) < at(k + 1)) ? k + 1 : k - 1; const px = at(pk), py = px - pk;
+    while (x > px && y > py) { ops.push(0); x--; y--; }
+    ops.push(x === px ? 1 : -1); x = px; y = py;
+  }
+  while (x > 0 && y > 0) { ops.push(0); x--; y--; }
+  ops.reverse();
+  const parts = []; let same = 0, del = 0, add = 0;
+  const flush = () => { if (del) parts.push({ removed: true, count: del }); if (add) parts.push({ added: true, count: add }); del = add = 0; };
+  for (const o of ops) {
+    if (o === 0) { if (del || add) flush(); same++; }
+    else { if (same) { parts.push({ count: same }); same = 0; } if (o < 0) del++; else add++; }
+  }
+  if (same) parts.push({ count: same }); flush();
+  return parts;
+}
+/* Aligned rows, like a split git diff: unchanged runs fold down to 3 rows of context; removed and added blocks pair up
+   row by row, and anything left over sits opposite a blank row. */
+function align(parts, A, B) {
+  const rows = []; let i = 0, j = 0; const CTX = 3;
+  for (let p = 0; p < parts.length; p++) {
+    const part = parts[p]; const n = part.count;
+    if (!part.added && !part.removed) {
+      const head = p > 0 ? CTX : 0, tail = p < parts.length - 1 ? CTX : 0;
+      const push = (k) => rows.push({ t: 'same', l: A[i + k], r: B[j + k] });
+      if (n > head + tail + 1) { for (let k = 0; k < head; k++) push(k); rows.push({ t: 'fold', n: n - head - tail }); for (let k = n - tail; k < n; k++) push(k); }
+      else for (let k = 0; k < n; k++) push(k);
+      i += n; j += n;
+    } else if (part.removed && parts[p + 1]?.added) {
+      const m = parts[p + 1].count;
+      rows.push(...pairUp(A.slice(i, i + n), B.slice(j, j + m)));
+      i += n; j += m; p++;
+    } else if (part.removed) { for (let k = 0; k < n; k++) rows.push({ t: 'del', l: A[i + k] }); i += n; }
+    else { for (let k = 0; k < n; k++) rows.push({ t: 'add', r: B[j + k] }); j += n; }
+  }
+  return rows;
+}
+// Pair each removed row with the most similar added row nearby (most shared cells equal), so a row whose date
+// changed sits opposite its own new version. Rows that differ in more than one cell are treated as different rows.
+function pairUp(ls, rs) {
+  const same = (l, r) => D0.shared.reduce((n, name, k) => n + (l.c[D0.li[k]] === r.c[D0.ri[k]] ? 1 : 0), 0);
+  const used = new Set(); const out = []; const W = 80;
+  ls.forEach((l, a) => {
+    let best = -1, score = -1;
+    for (let b = Math.max(0, a - W); b < Math.min(rs.length, a + W); b++) {
+      if (used.has(b)) continue; const sc = same(l, rs[b]); if (sc > score) { score = sc; best = b; }
+    }
+    if (best >= 0 && score >= D0.shared.length - 1) { used.add(best); out.push({ t: 'mod', l, r: rs[best] }); }
+    else out.push({ t: 'del', l });
+  });
+  rs.forEach((r, b) => { if (!used.has(b)) out.push({ t: 'add', r }); });
+  return out;
+}
+const WIDE = /name|address/i, MID = /date|suburb/i;
+const colW = (n) => (WIDE.test(n) ? 230 : MID.test(n) ? 160 : 100);
+function renderDiffView() {
+  const pick = (names) => { const all = names.map((n, i) => i); const v = all.filter((i) => D.diffCols.has(names[i])); return allCols || !v.length ? all : v; };
+  D.vl = pick(D.L); D.vr = pick(D.R);
+  const table = (names, vis, other, part) => {
+    const w = 52 + vis.reduce((s, i) => s + colW(names[i]), 0);
+    const cg = `<colgroup><col style="width:52px">${vis.map((i) => `<col style="width:${colW(names[i])}px">`).join('')}</colgroup>`;
+    if (part === 'head') return `<table style="width:${w}px">${cg}<thead><tr><th></th>${vis.map((i) => `<th class="${other.includes(names[i]) ? '' : 'only'}" title="${other.includes(names[i]) ? esc(names[i]) : 'Only in this file'}">${esc(names[i])}</th>`).join('')}</tr></thead></table>`;
+    return `<table style="width:${w}px">${cg}<tbody></tbody></table>`;
+  };
+  $('#diff-view').innerHTML = `<div class="diff">
+      <div class="diff-cap"><div class="g-bad glow" title="${esc(D.labels[0])}">− ${esc(D.labels[0])}</div><div class="g-good glow" title="${esc(D.labels[1])}">+ ${esc(D.labels[1])}</div></div>
+      <div class="sbs-head"><div class="pane" id="hl">${table(D.L, D.vl, D.R, 'head')}</div><div class="pane" id="hr">${table(D.R, D.vr, D.L, 'head')}</div></div>
+      <div class="sbs"><div class="pane" id="bl">${table(D.L, D.vl, D.R, 'body')}</div><div class="pane" id="br">${table(D.R, D.vr, D.L, 'body')}</div></div>
+    </div>
+    ${allCols || D.vl.length === D.L.length ? '' : `<p class="note" style="margin-top:8px">Showing the columns that differ, plus ${esc(D.shared[0])} to tell rows apart. Tick "All columns" for the rest.</p>`}
+    <div class="more" id="more"></div>`;
+  // keep the two sides and their headers scrolled together sideways
+  const panes = ['#bl', '#br', '#hl', '#hr'].map((id) => $(id)); let lock = false;
+  for (const pn of panes.slice(0, 2)) pn.addEventListener('scroll', () => { if (lock) return; lock = true; panes.forEach((o) => { if (o !== pn) o.scrollLeft = pn.scrollLeft; }); lock = false; });
+  shown = 0; showMore();
+}
+function side(x, which) {
+  const names = which === 'l' ? D.L : D.R, otherNames = which === 'l' ? D.R : D.L, vis = which === 'l' ? D.vl : D.vr;
+  const span = vis.length + 1;
+  if (x.t === 'fold') return `<tr class="fold"><td colspan="${span}">⋯ ${x.n.toLocaleString()} matching rows</td></tr>`;
+  const row = x[which]; if (!row) return `<tr class="blank"><td colspan="${span}"></td></tr>`;
+  const twin = x.t === 'mod' ? x[which === 'l' ? 'r' : 'l'] : null;
+  const cls = x.t === 'same' ? '' : which === 'l' ? 'del' : 'add';
+  const tds = vis.map((i) => {
+    const v = row.c[i] ?? ''; const o = otherNames.indexOf(names[i]);
+    const changed = twin && (o < 0 || twin.c[o] !== v);
+    return `<td class="${changed ? 'x' : ''}" title="${esc(v)}">${esc(v)}</td>`;
+  }).join('');
+  return `<tr class="${cls}"><td class="ln">${row.n}</td>${tds}</tr>`;
+}
+function showMore() {
+  const next = D.rows.slice(shown, shown + 300); shown += next.length;
+  $('#bl tbody').insertAdjacentHTML('beforeend', next.map((x) => side(x, 'l')).join(''));
+  $('#br tbody').insertAdjacentHTML('beforeend', next.map((x) => side(x, 'r')).join(''));
+  $('#more').innerHTML = shown < D.rows.length ? `<button type="button" class="btn" id="more-btn">Show more (${(D.rows.length - shown).toLocaleString()} rows left)</button>` : '';
+  $('#more-btn')?.addEventListener('click', showMore);
+}
+
+/* 3 · Capability heat map */
+let heatFilter = 'all'; let pinned = null;
+const VALUE = { 3: 1, 2: 0.5, 1: 0 };
+// Matplotlib's inferno, sampled every 0.1. Starts at 0.12 so a 0 cell still shows against the dark page.
+const INFERNO = ['#000004', '#160b39', '#420a68', '#6a176e', '#932667', '#bc3754', '#dd513a', '#f37819', '#fca50a', '#f6d746', '#fcffa4'];
+const hex = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+function infernoRGB(t) {
+  const x = Math.min(1, Math.max(0, t)) * 10; const i = Math.min(9, Math.floor(x)); const f = x - i;
+  const a = hex(INFERNO[i]), b = hex(INFERNO[i + 1]);
+  return a.map((c, k) => Math.round(c + (b[k] - c) * f));
+}
+const T0 = 0.12;
+function ramp(v) { const [r, g, b] = infernoRGB(T0 + (1 - T0) * v); return `rgb(${r} ${g} ${b})`; }
+function ink(v) { const [r, g, b] = infernoRGB(T0 + (1 - T0) * v); return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.55 ? 'rgba(0,0,0,0.78)' : 'rgba(255,255,255,0.88)'; }
+const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+const fmt = (v) => (v == null ? 'n/a' : v.toFixed(2));
+$('#cbar-grad').style.background = `linear-gradient(0deg, ${[0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1].map((v) => ramp(v)).join(', ')})`;
+function renderHeat() {
+  const caps = DATA.capabilities; const rows = DRIFT.filter((s) => s.heat && (heatFilter === 'all' || s.family === heatFilter));
+  let html = `<thead><tr><th></th>${caps.map(([k, l], i) => `<th data-col="${i}">${esc(l)}</th>`).join('')}<th class="gap"></th><th>Overall</th><th>Verdict</th></tr></thead><tbody>`;
+  rows.forEach((s, ri) => {
+    html += `<tr><td class="rowh" data-row="${ri}">${tag(s)}<div class="n">${esc(s.label)}</div></td>`;
+    caps.forEach(([k], ci) => {
+      const { score } = s.heat.cells[k]; const [, word] = SCORE[score];
+      const on = pinned && pinned.s === s.id && pinned.k === k;
+      const v = VALUE[score];
+      html += `<td><button type="button" class="cellbtn" style="--c:${v == null ? 'var(--na)' : ramp(v)};--ink:${v == null ? 'var(--text-3)' : ink(v)}" data-score="${score}" data-s="${s.id}" data-k="${k}" data-row="${ri}" data-col="${ci}" aria-pressed="${on}" aria-label="${esc(s.short)} ${esc(s.label)}: ${esc(caps[ci][1])}, ${word}"><span class="w2">${word}</span></button></td>`;
+    });
+    const overall = mean(caps.map(([k]) => VALUE[s.heat.cells[k].score]).filter((v) => v != null));
+    html += `<td class="gap"></td><td><div class="agg" style="--c:${ramp(overall)};--ink:${ink(overall)}" title="Average of the tested capabilities">${fmt(overall)}</div></td>`;
+    const [vg, vw] = VERDICT[s.heat.verdict];
+    html += `<td style="padding-left:10px"><span class="pill g-${vg}" style="font-size:13.5px">${vw}</span></td></tr>`;
+  });
+  // Average per capability across the drift cases shown
+  const colAvg = caps.map(([k]) => mean(rows.map((s) => VALUE[s.heat.cells[k].score]).filter((v) => v != null)));
+  const all = mean(rows.flatMap((s) => caps.map(([k]) => VALUE[s.heat.cells[k].score]).filter((v) => v != null)));
+  html += `<tr class="avg"><td class="rowh"><span class="label">across ${rows.length} ${rows.length === 1 ? 'case' : 'cases'}</span><div class="n">Average</div></td>`
+    + colAvg.map((v) => `<td><div class="agg" style="--c:${v == null ? 'var(--na)' : ramp(v)};--ink:${v == null ? 'var(--text-3)' : ink(v)}">${fmt(v)}</div></td>`).join('')
+    + `<td class="gap"></td><td><div class="agg" style="--c:${ramp(all)};--ink:${ink(all)}">${fmt(all)}</div></td><td></td></tr>`;
+  $('#heat-table').innerHTML = html + '</tbody>';
+  renderSide(); placeColourBar();
+}
+// The colour bar runs alongside the case rows (not the header or the average row).
+function placeColourBar() {
+  const rows = [...document.querySelectorAll('#heat-table tbody tr:not(.avg)')]; if (!rows.length) return;
+  const top = rows[0].offsetTop, bottom = rows[rows.length - 1].offsetTop + rows[rows.length - 1].offsetHeight;
+  const bar = $('#cbar'); bar.style.marginTop = top + 'px'; bar.style.height = bottom - top + 'px';
+}
+window.addEventListener('resize', placeColourBar);
+function renderSide() {
+  const side = $('#heat-side');
+  if (!pinned) {
+    const all = DRIFT.filter((s) => s.heat);
+    const count = (v) => all.filter((s) => s.heat.verdict === v).length;
+    side.innerHTML = `<span class="label">Summary</span><h3>${count('handled')} handled, ${count('breaks')} break, ${count('missed')} missed</h3>
+      <p class="why">Rhombus stops loudly when a column it needs disappears. It's weakest when the data <i>looks</i> fine, and both semantic cases went through as "successful" runs.</p>`;
+    return;
+  }
+  const s = DATA.scenarios.find((x) => x.id === pinned.s); const c = s.heat.cells[pinned.k];
+  const [g, word] = SCORE[c.score]; const [vg, vw] = VERDICT[s.heat.verdict];
+  const cap = DATA.capabilities.find(([k]) => k === pinned.k)[1];
+  side.innerHTML = `<span class="label">${esc(s.family)} · ${esc(s.part)} · ${esc(s.change)}</span><div>${tag(s)}</div><h3>${esc(s.label)}</h3>
+    <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:14px"><span><span class="muted">${esc(cap)}</span> <span class="pill g-${g}">${word}</span></span><span><span class="muted">Overall</span> <span class="pill g-${vg}">${vw}</span></span></div>
+    <p class="why">${esc(c.why)}</p><p class="muted" style="font-size:13px">${esc(s.heat.summary)}.</p>
+    <div style="display:flex;gap:16px;font-size:13px"><a href="${s.writeup}">Read the write-up</a><a href="#health" class="to-runs">See its runs</a></div>`;
+  side.querySelector('.to-runs').addEventListener('click', () => { selected = s.id; renderDetail(); });
+}
+const heatTable = $('#heat-table');
+heatTable.addEventListener('click', (e) => {
+  const b = e.target.closest('.cellbtn'); if (!b) return;
+  pinned = pinned && pinned.s === b.dataset.s && pinned.k === b.dataset.k ? null : { s: b.dataset.s, k: b.dataset.k };
+  heatTable.querySelectorAll('.cellbtn').forEach((x) => x.setAttribute('aria-pressed', String(!!pinned && x.dataset.s === pinned.s && x.dataset.k === pinned.k)));
+  renderSide();
+});
+heatTable.addEventListener('mouseover', (e) => {
+  const b = e.target.closest('.cellbtn'); if (!b) return;
+  heatTable.classList.add('hovering');
+  heatTable.querySelectorAll('.hl,.on').forEach((x) => x.classList.remove('hl', 'on'));
+  heatTable.querySelectorAll(`.cellbtn[data-row="${b.dataset.row}"], .cellbtn[data-col="${b.dataset.col}"], td.rowh[data-row="${b.dataset.row}"]`).forEach((x) => x.classList.add('hl'));
+  heatTable.querySelector(`th[data-col="${b.dataset.col}"]`)?.classList.add('on');
+  const s = DATA.scenarios.find((x) => x.id === b.dataset.s); const c = s.heat.cells[b.dataset.k];
+  showTip(e, `<b>${esc(s.short)} · ${esc(s.label)}</b><br>${esc(DATA.capabilities.find(([k]) => k === b.dataset.k)[1])} · ${SCORE[c.score][1]}<br>${esc(c.why)}`);
+});
+heatTable.addEventListener('mousemove', (e) => { if (e.target.closest('.cellbtn')) { tip.style.left = Math.min(e.clientX + 14, window.innerWidth - tip.offsetWidth - 12) + 'px'; tip.style.top = (e.clientY + 18) + 'px'; } });
+heatTable.addEventListener('mouseleave', () => { heatTable.classList.remove('hovering'); heatTable.querySelectorAll('.hl,.on').forEach((x) => x.classList.remove('hl', 'on')); hideTip(); });
+$('#heat-filter').addEventListener('click', (e) => {
+  const b = e.target.closest('button'); if (!b) return; heatFilter = b.dataset.f; pinned = null;
+  $('#heat-filter').querySelectorAll('button').forEach((x) => x.setAttribute('aria-pressed', String(x === b))); renderHeat();
+});
+
+/* 4 · Execution time: per case, a slim box (3+ timed runs) and every run as a dot in a swarm beside it, so nothing overlaps.
+   The first run after a build (138 s+) sits in a band above a break in the axis. */
+function swarm(vals, y, gap) {
+  // place each dot at the first horizontal slot where it doesn't touch a dot already placed
+  const placed = []; return vals.map((v) => {
+    const py = y(v); let slot = 0;
+    while (placed.some((q) => q.slot === slot && Math.abs(q.py - py) < gap)) slot++;
+    placed.push({ slot, py }); return slot;
+  });
+}
+function renderBox() {
+  const svg = $('#box'); const sc = [BASE, ...DRIFT];
+  const W = 1100, H = 380, L = 54, R = 16, T = 56, B = 74; const plotH = H - T - B; const maxS = 30;
+  const colW = (W - L - R) / sc.length; const y = (s) => T + plotH - (s / maxS) * plotH;
+  const q = (arr, p) => { const a = [...arr].sort((m, n) => m - n); const i = (a.length - 1) * p; const lo = Math.floor(i); return a[lo] + (a[Math.ceil(i)] - a[lo]) * (i - lo); };
+  const muted = css('--text-3'), line = css('--line'), bg = css('--bg');
+  let g = '';
+  for (let t = 0; t <= maxS; t += 10) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/><text x="${L - 10}" y="${y(t) + 4}" text-anchor="end">${t} s</text>`;
+  g += `<text x="${L - 10}" y="${T - 22}" text-anchor="end">138 s+</text><line x1="${L}" x2="${W - R}" y1="${T - 10}" y2="${T - 10}" stroke="${line}" stroke-dasharray="2 4"/>`;
+  g += `<line x1="${L + colW}" x2="${L + colW}" y1="${T - 30}" y2="${H - B + 46}" stroke="${css('--line-2')}" stroke-dasharray="2 4"/>`;
+  sc.forEach((s, i) => {
+    const x0 = L + colW * i; const bx = x0 + colW * 0.34; const dx = x0 + colW * 0.52;
+    const rs = s.runs.filter((r) => r.counted === 'yes' && r.duration_s);
+    const steady = rs.filter((r) => !r.first_after_build);
+    const vals = steady.map((r) => +r.duration_s);
+    if (vals.length >= 3) {
+      const [q1, md, q3] = [q(vals, 0.25), q(vals, 0.5), q(vals, 0.75)]; const lo = Math.min(...vals), hi = Math.max(...vals);
+      g += `<line x1="${bx}" x2="${bx}" y1="${y(hi)}" y2="${y(lo)}" stroke="${muted}"/>`;
+      g += `<rect x="${bx - 7}" y="${y(q3)}" width="14" height="${Math.max(2, y(q1) - y(q3))}" rx="2" fill="${css('--raise')}" stroke="${muted}"/>`;
+      g += `<line x1="${bx - 7}" x2="${bx + 7}" y1="${y(md)}" y2="${y(md)}" stroke="${css('--fg')}" stroke-width="2"/>`;
+    }
+    const order = steady.map((r, k) => k).sort((m, n) => +steady[m].duration_s - +steady[n].duration_s);
+    const slots = swarm(order.map((k) => +steady[k].duration_s), y, 9);
+    order.forEach((k, j) => {
+      const r = steady[k]; const c = ok(r) ? css('--good') : css('--bad');
+      g += `<circle cx="${dx + slots[j] * 9}" cy="${y(+r.duration_s)}" r="4" fill="${c}" stroke="${bg}" stroke-width="1" data-s="${s.id}" data-i="${s.runs.indexOf(r)}"/>`;
+    });
+    rs.filter((r) => r.first_after_build).forEach((r, k) => {
+      g += `<circle cx="${dx + k * 11}" cy="${T - 26}" r="4" fill="none" stroke="${ok(r) ? css('--good') : css('--bad')}" stroke-width="1.5" data-s="${s.id}" data-i="${s.runs.indexOf(r)}"/>`;
+    });
+    const cx = x0 + colW / 2;
+    if (!rs.length) g += `<text x="${cx}" y="${y(3)}" text-anchor="middle" style="fill:${muted};font-size:11px">no durations logged</text>`;
+    g += `<text class="id" x="${cx}" y="${H - B + 22}" text-anchor="middle">${esc(s.short)}</text>`;
+    g += `<text x="${cx}" y="${H - B + 39}" text-anchor="middle" style="fill:${css('--fg-2')}">${esc(s.id === 'baseline' ? 'reference' : s.label)}</text>`;
+    g += `<text x="${cx}" y="${H - B + 55}" text-anchor="middle" style="font-size:11px;fill:${muted}">${vals.length ? 'median ' + Math.round(q(vals, 0.5)) + ' s · ' + vals.length + (vals.length === 1 ? ' run' : ' runs') : ''}</text>`;
+  });
+  g += `<g transform="translate(${W - R - 330}, 14)"><circle cx="0" cy="0" r="4" fill="${css('--good')}"/><text x="9" y="4">succeeded</text><circle cx="86" cy="0" r="4" fill="${css('--bad')}"/><text x="95" y="4">failed</text><circle cx="148" cy="0" r="4" fill="none" stroke="${css('--good')}" stroke-width="1.5"/><text x="157" y="4">first run after a build</text><rect x="290" y="-6" width="10" height="12" rx="2" fill="${css('--raise')}" stroke="${muted}"/><text x="306" y="4">spread</text></g>`;
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
+}
+$('#box').addEventListener('mousemove', (e) => {
+  const c = e.target.closest('circle[data-s]'); if (!c) return hideTip();
+  const s = DATA.scenarios.find((x) => x.id === c.dataset.s); const r = s.runs[+c.dataset.i];
+  showTip(e, `<b>${esc(s.short)} · ${esc(s.label)}</b> · ${r.duration_s} s · ${esc(r.rhombus_result)}<br>${esc(r.time)}${r.stopped_at ? ' · stopped at ' + esc(r.stopped_at) : ''}<br>${esc(r.note)}`);
+});
+$('#box').addEventListener('mouseleave', hideTip);
+
+renderHealth(); renderHeat(); renderBox();
+sel.left.value = PRESETS[0][1]; sel.right.value = PRESETS[0][2]; $('#sort').checked = PRESETS[0][3]; runDiff();
+</script>
+</body>
+</html>

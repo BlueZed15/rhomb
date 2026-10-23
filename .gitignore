@@ -1,0 +1,41 @@
+# Secrets: never commit
+.env
+*.pem
+*-key.json
+*service-account*.json
+credentials*
+*.har
+
+# Node / Playwright
+node_modules/
+ui-tests/test-results/
+ui-tests/playwright-report/
+ui-tests/.auth/
+api-tests/test-results/
+api-tests/playwright-report/
+
+# Python
+__pycache__/
+.venv/
+*.pyc
+
+# Downloaded pipeline outputs (results are summarised in data-validation/results/)
+data-validation/downloads/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Raw source download (re-fetched by datasets/generate.py)
+datasets/raw/
+
+# Session handover note (not part of the submission)
+HANDOVER.md
+
+# Playwright (root config)
+.auth/
+test-results/
+playwright-report/
+demo-video/
