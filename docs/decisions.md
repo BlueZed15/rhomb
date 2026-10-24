@@ -20,13 +20,13 @@ The trade-off is more setup and more keys to look after. I planned a read-only G
 Every drift version is kept, so each run can point to the exact file it read ([runs.csv](../data-validation/runs.csv)).
 Old versions take up space, but at this size that costs basically nothing.
 
-## D5. Drift goes in by overwriting the same file
-That's how drift really happens, when something upstream changes a file you already read. Uploading a new file name would test something else.
-The risk here was Rhombus caching the file, so runs would read old data. It did. The import is a one-time snapshot, so the schedule never saw the new file (finding #3 in the README). Each drift case had to be re-imported by hand.
+## D5. Each drift file is its own import, and a case switches the input
+My plan was to overwrite the same S3 file, because that's how drift really happens. But Rhombus's import is a one-time snapshot, so the schedule never sees a changed file: it just logs "Skipped… unchanged data". So I import every file once up front ([`import-inputs.mjs`](../scripts/import-inputs.mjs)), and a drift case is switching the drift pipeline's input to that file.
+The trade-off is that it isn't quite an upstream change. It tests what the pipeline and the schedule do with a drifted file, not whether Rhombus notices the source changed (it doesn't).
 
-## D6. Every drift case starts from the same verified baseline
-A chatbot fix for one case mustn't leak into the next. Rhombus can't duplicate a project, so after each case I rebuilt the pipeline from the same prompt and checked its output was byte-identical to the original before moving on.
-The trade-off is credits and time. I learned why it matters the hard way, when my first schema-drift3 attempt inherited schema-drift2's changes and I had to redo it ([schema-drift3-change-type](../observations/schema-drift3-change-type.md)).
+## D6. The baseline is its own pipeline on the same canvas
+The chatbot's fixes edit the pipeline, so after a case it isn't the baseline any more. So one canvas holds two pipelines: the baseline, reading `Table 1.csv`, which I never edit, and an exact copy that gets each drift file and the chatbot's fixes. The builder can't copy code, and when I asked it to make the copy it rewrote the baseline too ([prompt 7](prompts/07-drift-copy.md)). So I made the copy by pasting the baseline's code into each step, and I reset it the same way before every case. Each case starts with a pre-check: the copy's output has to be byte-identical to the baseline's.
+The trade-off is time. Apply runs both pipelines, and switching the input wipes the copy's built-in settings, so every reset is several re-runs.
 
 ## D7. Datasets come from a seeded script
 Anyone can regenerate them, and "only one thing changed" is provable in code.
@@ -37,8 +37,8 @@ Each write-up has a "What I expected" section I wrote before running the case, s
 The weak spot here is proof. I planned to commit each prediction first so git timestamps would show the order, but I didn't commit during the work, so you're taking the order on trust.
 
 ## D9. S3 through a presigned URL instead of the S3 connector
-The S3 connector kept getting denied on Rhombus's side, even with their exact policy ([write-up](../observations/setup-s3-source-connection.md)). So the data stays in the same private bucket, and Rhombus reads it through "From Web URL" using a 7-day link from [`presign_url.py`](../scripts/presign_url.py). A link to the CSV threw an error saying no markdown tables were found, so I serve the same data as `.xlsx`, which it reads fine. It's the closest I could get to the brief, and it works today.
-The trade-off is that it's not the connector the brief asks for, and the link expires after 7 days. It's also a snapshot, so each drift case meant re-importing the link rather than waiting for the schedule.
+The S3 connector kept getting denied on Rhombus's side, even with their exact policy ([write-up](../observations/setup-s3-source-connection.md)). So the data stays in the same private bucket, and Rhombus reads it through "From Web URL" using a short-lived presigned link, signed by [`import-inputs.mjs`](../scripts/import-inputs.mjs). A link to the CSV failed ("no markdown tables were found"), so I serve the same data as `.xlsx`, which it reads fine.
+The trade-off is that it's not the connector the brief asks for, and the import is a snapshot ([D5](#d5-each-drift-file-is-its-own-import-and-a-case-switches-the-input)).
 
 ## D10. NSW FuelCheck fuel prices as the dataset
 I wanted real Australian data where the drift cases make sense. It's [published monthly by NSW Fair Trading](https://data.nsw.gov.au/data/dataset/fuel-check) under CC BY-SA. Prices are in cents per litre, so a feed switching to dollars is a believable mistake. Dates are DD/MM, so a US-style export is a real risk too.
@@ -57,14 +57,14 @@ Every API call is a GET, so nothing on a real account changes. Bugs I found are 
 The trade-off is that write endpoints (create, delete, run) go untested by the API suite. The UI journey covers creating things.
 
 ## D14. Breadth over repetition
-Seven drift cases run once each, instead of a few cases run several times.
-The trade-off is that it shows each behaviour happens, but not how often. The chatbot in particular gives different answers each time.
+Seven drift cases, each setup run 3 times, and the chatbot asked once per case. Repeating a setup is cheap (▶ twice); repeating the chatbot means resetting the drift copy after every answer.
+The trade-off is that the pipeline's behaviour is shown to be repeatable, but the chatbot's isn't, and it gives different answers each time.
 
 ## D15. A different chart for each dashboard view
 I picked each chart for the question that view answers.
-- **Pipeline health** is a horizontal stacked bar per drift case. The question is how many runs passed or failed for the baseline and 7 named cases, and bars compare counts better than a pie. Horizontal leaves room for the case names and for my validator's verdict at the end of each bar.
-- **Output consistency** is a sha256 table plus a side-by-side table diff. "Same or not" is a yes/no, so a hash answers it exactly. When two files do differ, the diff shows them as tables, matches rows on the columns both files share, and shows only the columns that changed, so the 733 swapped dates in the baseline stand out instead of hiding in raw CSV lines.
-- **Capability heat map** is a grid of drift case × what a customer needs, on one dark-to-bright scale (inferno). It's two sets of categories against each other, so a grid shows the pattern at a glance: stops loudly, rarely recovers. A single sequential scale reads as worse to better and still works for colour-blind readers.
-- **Execution time** is a box plot with every run drawn as a dot. Most cases have 1–6 runs, so an average would hide the spread, and a line graph would suggest a trend over time that isn't there. The box only appears where a case has 3 or more timed runs.
+- **Pipeline health** is a horizontal stacked bar per case. Bars compare counts better than a pie, and horizontal leaves room for the case names and my validator's verdict.
+- **Output consistency** is a table plus a side-by-side diff. "Same or not" is a yes/no, so a sha256 answers it exactly (or, when nothing was written, the step and error it failed with). The diff shows only the cells that changed, so the 733 swapped dates stand out, and a short note says what kind of change it is.
+- **Capability heat map** is a grid of case × what a customer needs, on one dark-to-bright scale that also works for colour-blind readers.
+- **Execution time** is a box plot with every run as a dot. With 3–8 runs per case, an average would hide the spread, and a line would suggest a trend that isn't there.
 
 The trade-off is that the heat map scores are my judgement, not measurements, so every cell links to the write-up behind it.

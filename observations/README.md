@@ -7,11 +7,11 @@ Every case has the same parts:
 - **A summary table**: what changed, whether the pipeline stopped, what reached GCS, whether the chatbot fixed it, and a severity from the [rubric](../README.md#severity-rubric).
 - **What I expected**, written before the run, so you can see where I was wrong.
 - **What happened**, with the exact error text and a screenshot link for each claim.
-- **The logs, the chatbot, the schedule.** These are the four questions the brief asks for every case.
+- **The logs, the chatbot, the schedule**, which with "what happened" are the four questions the brief asks for every case.
 - **What I think**: my judgement, kept short.
-- **Reproduce**: the commands to run it again. They assume the setup in [`docs/setup/`](../docs/setup/) is done (your bucket, the GCS destination, and a project with the baseline pipeline from [prompt 6](../docs/prompts/06-rebuild-clean-baseline.md)).
+- **Reproduce**: the commands to run it again. They assume the setup in [`docs/setup/`](../docs/setup/) is done (your bucket, the GCS destination, and a project with the baseline pipeline from [prompt 6](../docs/prompts/06-baseline-pipeline.md) plus its drift copy).
 
-Screenshots are in [`evidence/`](evidence/): `setup/` (connecting S3), `pipeline/` (building the baseline) and `drift/` (the drift runs, numbered in the order they happened).
+Screenshots are in [`evidence/`](evidence/): `setup/` (connecting S3), `pipeline/` (developing the pipeline prompt), `baseline/` (the baseline build) and `drift/` (the drift runs, numbered in the order they happened, `NN-<case-id>-<what it shows>.jpg`).
 
 ## Order of the cases
 1. [Setup: S3 connection](setup-s3-source-connection.md): why the source is a link instead of the S3 connector
@@ -29,10 +29,13 @@ Screenshots are in [`evidence/`](evidence/): `setup/` (connecting S3), `pipeline
 | **Built-in node** | A ready-made step with settings (e.g. "Change Text Case", "Remove Duplicates") |
 | **LLM node** | A step where Rhombus writes Python from a plain-English instruction, then runs that code |
 | **`code_sha`** | An ID for the code an LLM node actually runs, printed in its errors. If a "fix" leaves it unchanged, the fix didn't change what runs |
-| **Data Input / From Web URL** | The input step, and its option to import a file from a link. I used it with a presigned S3 link because the S3 connector was blocked ([D9](../docs/decisions.md#d9-s3-through-a-presigned-url-instead-of-the-s3-connector)) |
-| **Presigned link** | A temporary S3 link with a signature in it, so a private file can be read without sharing keys |
+| **Data Input / From Web URL** | The input step, and its option to import a file from a link. I used it with a presigned S3 link (a temporary signed link, so no keys are shared) because the S3 connector was blocked ([D9](../docs/decisions.md#d9-s3-through-a-presigned-url-instead-of-the-s3-connector)) |
 | **`Table 1.csv`, `Table 1 (3).csv`** | The names Rhombus gives each imported file. A new import gets the next number |
-| **`drift1`, `fuelcheck-baseline`** | My two Rhombus projects. `drift1` held schema-drift1 to schema-drift3 (first attempt). Every later case started in `fuelcheck-baseline`, from the same verified pipeline |
-| **schema-drift1–5, semantic-drift1–2** | Case IDs. Schema drift is Part 2 of the brief: one change at a time, then all four at once (schema-drift5). Semantic drift is Part 3. Files, results and screenshots all start with the ID. The S3 archive copies keep their original numbered names (`fuelcheck_1_…` is schema-drift1, …, `fuelcheck_7_…` is semantic-drift2). [`runs.csv`](../data-validation/runs.csv) maps each case to its input file in S3 and its output in GCS. |
+| **`fuelcheck-drift`** | The Rhombus project every case ran in. Its canvas holds two pipelines ([D6](../docs/decisions.md#d6-the-baseline-is-its-own-pipeline-on-the-same-canvas)) |
+| **Baseline pipeline / drift pipeline** | The baseline (`base_…` steps) always reads `Table 1.csv` and is never edited. The drift pipeline (`drift_…` steps) is an exact copy that gets each drift file and the chatbot's fixes, and is reset to the baseline before each case |
+| **Pre-check** | The run of the reset drift pipeline on `Table 1.csv` before each case. Its output must be byte-identical to the baseline's |
+| **GCS outputs** | Rhombus writes `fuelcheck-<case-id>_<ms>.csv` at the bucket root. I kept one file per case, renamed into a folder: `rhom-1/baseline/baseline-output.csv` and `rhom-1/<case-id>/drift-output.csv` (`output-after-chatbot-fix.csv` for schema-drift3). Everything else is in `old-runs/` |
+| **`drift1`, `fuelcheck-baseline`** | Older projects from developing the pipeline prompt. Not used for the results |
+| **schema-drift1–5, semantic-drift1–2** | Case IDs. Schema drift is Part 2 of the brief: one change at a time, then all four at once (schema-drift5). Semantic drift is Part 3. [`runs.csv`](../data-validation/runs.csv) maps each case to its input in S3 and its output in GCS |
 | **Answer key** | The correct cleaned output, written by my dataset script ([`baseline_expected.csv`](../datasets/)). Used to check what Rhombus produced |
-| **Byte-identical / sha256** | Two output files are exactly the same, down to the byte. I used this to prove a rebuilt pipeline still matched the original baseline |
+| **Byte-identical / sha256** | Two files are exactly the same, down to the byte. The baseline output is `503fd6ed…` |

@@ -5,7 +5,7 @@
 > - **The S3 connection in Step 4 never worked.** Rhombus was denied inside its own network, with the bucket policy and their CloudFormation template both applied ([write-up](../../observations/setup-s3-source-connection.md)). So Rhombus reads the file through a presigned link instead ([D9](../decisions.md#d9-s3-through-a-presigned-url-instead-of-the-s3-connector)). Steps 0–3 are still used: the bucket, versioning and the IAM user power that workaround.
 > - I turned **Block Public Access off** while debugging. It wasn't the cause, and it should go back on.
 
-The goal is an S3 bucket that Rhombus can **read** (through a bucket policy it generates, so no keys are shared), plus a separate IAM user that my local scripts use to upload drift files and read input. See [D3](../decisions.md#d3-a-separate-minimal-identity-for-each-job), [D4](../decisions.md#d4-versioning-on-the-s3-bucket) and [D5](../decisions.md#d5-drift-goes-in-by-overwriting-the-same-file).
+The goal is an S3 bucket that Rhombus can **read** (through a bucket policy it generates, so no keys are shared), plus a separate IAM user that my local scripts use to upload drift files and read input. See [D3](../decisions.md#d3-a-separate-minimal-identity-for-each-job), [D4](../decisions.md#d4-versioning-on-the-s3-bucket) and [D5](../decisions.md#d5-each-drift-file-is-its-own-import-and-a-case-switches-the-input).
 
 All steps use the AWS Console. Nothing here needs the AWS CLI.
 
@@ -15,7 +15,7 @@ All steps use the AWS Console. Nothing here needs the AWS CLI.
 |---|---|
 | Region | e.g. `ap-southeast-2` |
 | Source bucket | e.g. `rhombus-qa-src-<suffix>` |
-| Source object key | `input/fuelcheck.xlsx` (live, overwritten per run) + numbered copies in `input/archive/` |
+| Source objects | `input/fuelcheck.xlsx` (live) + one copy per case in `input/archive/` ([runs.csv](../../data-validation/runs.csv)) |
 | Local QA IAM user | `rhombus-qa-local` |
 
 ---
@@ -48,7 +48,7 @@ Don't upload the dataset yet. That happens after the dataset is generated ([`dat
 2. **Permissions → Attach policies directly → Create inline policy → JSON**. Paste [`infra/aws/local-qa-user-policy.json`](../../infra/aws/local-qa-user-policy.json), replacing `<SOURCE_BUCKET>`. Name it `rhombus-qa-local-s3`.
 3. Open the user → **Security credentials → Create access key** → use case **"Local code"** → copy both values into `.env` (`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`).
 
-> I use a separate user with only these permissions because the scripts need to upload drift files and read them back with version history, and nothing else. `s3:GetObjectVersion` and `s3:ListBucketVersions` let the validator record exactly which input version a run processed. There's no delete permission, so a bug in a script can't destroy evidence, because versioning keeps every overwrite.
+> The scripts only need to upload drift files and read them back, so that's all this user can do. There's no delete permission, so a bug in a script can't destroy evidence, and versioning keeps every overwrite.
 
 ## Step 4. Grant Rhombus read access
 Do this in Rhombus, following [03-rhombus-pipeline.md → Connect S3](03-rhombus-pipeline.md#step-2-connect-s3-source). In short:

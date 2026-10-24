@@ -91,7 +91,7 @@ const scenes = [
   },
   {
     secs: 11,
-    caption: 'First run only: after this the saved session is reused and nothing is asked',
+    caption: 'Asked once, then the saved session is reused · if it expires, run npm run test:api -- --login',
     html: terminal('First run: the login prompt', [
       '$ npm run test:api',
       '',
@@ -105,7 +105,7 @@ const scenes = [
   { secs: 4, html: section(1, 'API tests', 'api-tests/rhombus.api.spec.ts') },
   {
     secs: 14,
-    caption: "All GET requests to Rhombus's own backend, so they're safe on a real account",
+    caption: "All GETs, so they're safe on a real account · the pipeline test reads your newest full pipeline, so run the UI test first (or it skips)",
     html: table('What they check', [
       ['Usual', 'Project list keeps its fields; /context agrees', '<code>/dataset/projects/all</code>, <code>/{id}/context</code>'],
       ['Usual', 'A saved pipeline is wired correctly', '<code>/analyzer/v2/projects/{id}/nodes</code>'],
@@ -117,16 +117,16 @@ const scenes = [
   {
     secs: 12,
     caption: '6 and 7 are known Rhombus bugs, written as tests that are expected to fail, so "ok" means the bug is still there',
-    html: terminal('Run: npm run test:api   (about 15 s)', [
-      '  ok 1 [setup] log in with the test account (1.6s)',
-      '  ok 2 usual: the project list keeps its contract (292ms)',
-      '  ok 3 usual: a saved pipeline is structurally sound (2.4s)',
-      '  ok 4 edge: bad or forged credentials are rejected with 401 (260ms)',
-      "  ok 5 edge: other customers' projects stay hidden, and odd ids fail safely (2.0s)",
+    html: terminal('Run: npm run test:api   (about 10 s)', [
+      '  ok 1 [setup] log in with the test account (658ms)',
+      '  ok 2 usual: the project list keeps its contract (330ms)',
+      '  ok 3 usual: a saved pipeline is structurally sound (1.2s)',
+      '  ok 4 edge: bad or forged credentials are rejected with 401 (285ms)',
+      "  ok 5 edge: other customers' projects stay hidden, and odd ids fail safely (2.6s)",
       '  ok 6 known issues (expected to fail) › imported datasets keep the presigned S3 link, signature and all',
       '  ok 7 known issues (expected to fail) › a lowercase "bearer" scheme behaves like "Bearer"',
       '',
-      '  7 passed (15.1s)',
+      '  7 passed (10.1s)',
       '',
       '$ npx playwright show-report      # every step of every test, in the browser',
     ]),
@@ -149,7 +149,7 @@ const scenes = [
     html: table('What it does, and what it asserts', [
       ['1', 'Create a project', 'URL becomes /workflow/&lt;id&gt;'],
       ['2', 'Sign a 1-hour S3 link with your IAM key, import it (From Web URL)', '"table imported successfully"'],
-      ['3', 'One AI-builder prompt with the 9 cleaning rules', 'API shows at least 10 steps'],
+      ['3', 'One AI-builder prompt with the 9 cleaning rules (the baseline\'s prompt 6)', 'API shows at least 10 steps'],
       ['4', 'Add the GCS destination from your key file, then run', 'Newest log line: "Pipeline completed successfully"'],
       ['5', 'Add a daily schedule', 'Card shows "Active" and "Next run"'],
     ], ['#', 'Step', 'Asserts']),
@@ -164,22 +164,22 @@ const scenes = [
       '$ npm run test:ui -- --fresh          # redo every step',
       '$ npm run test:ui -- --fresh --record # also keep a video of each step',
       '',
-      '  ok 1 [setup] log in with the test account (3.3s)',
-      '  ok 2 create a throwaway project (5.0s)',
-      '  ok 3 S3 source: import the baseline through a presigned link (5.0s)',
-      '  ok 4 AI builder: one Pipeline prompt builds the cleaning nodes (4.7s)',
-      '  ok 5 GCS destination: set it up in the output panel and run (2.0m)',
-      '  ok 6 schedule: create a daily schedule (32.5s)',
-      '  6 passed (3.0m)',
+      '  ok 1 [setup] log in with the test account (648ms)',
+      '  ok 2 create a throwaway project (739ms)',
+      '  ok 3 S3 source: import the baseline through a presigned link (1.7s)',
+      '  ok 4 AI builder: one Pipeline prompt builds the cleaning nodes (1.8s)',
+      '  ok 5 GCS destination: set it up in the output panel and run (30.6s)',
+      '  ok 6 schedule: create a daily schedule (9.2s)',
+      '  6 passed (48.8s)',
     ]),
   },
 
   { secs: 4, html: section(3, 'Data validation', 'data-validation/validate.py') },
   {
     secs: 18,
-    caption: '"expected" is my 9 cleaning rules applied to the input · same row, but 8 September came out as 9 August',
+    caption: 'Input file first, then the output (mine are in dashboard/data/; for your own run, download it from GCS) · here 8 September came out as 9 August',
     html: terminal('Run it: the input file and the output file', [
-      '$ python data-validation/validate.py datasets/baseline.csv output_baseline.csv',
+      '$ python data-validation/validate.py datasets/baseline.csv dashboard/data/baseline.csv',
       '',
       '  input     2613 rows, 8 columns',
       '  expected  2401 rows',
@@ -199,7 +199,7 @@ const scenes = [
   },
   {
     secs: 15,
-    caption: 'Prices sent in dollars: Rhombus reported success · the validator fails it (0 rows, 38 expected)',
+    caption: 'Prices sent in dollars: Rhombus stopped on an empty table and said nothing about units · the validator: no output, 38 rows expected',
     html: `<h2>What it checks</h2><div class="split">
       <ul class="small">
         <li>Schema: missing or extra columns</li>
@@ -210,15 +210,13 @@ const scenes = [
         <li>No output at all? Use <code>--no-output</code></li>
       </ul>
       <pre class="term">$ python data-validation/validate.py \
-    datasets/semantic-drift1-cents-to-dollars.csv output_semantic-drift1-cents-to-dollars.csv
+    datasets/semantic-drift1-cents-to-dollars.csv --no-output
 
   expected  38 rows
-  output    0 rows
+  output    none
 
   FAIL
-   - the output has 0 rows
-   - 0 rows out, 38 expected
-   - 38 expected rows are missing or different</pre></div>`,
+   - no output was written</pre></div>`,
   },
   {
     secs: 9,

@@ -2,11 +2,9 @@
 
 I tested Rhombus AI the way a customer would use it: a **scheduled pipeline from Amazon S3 to Google Cloud Storage**, built with the AI builder only. Then I broke the source data on purpose, first its structure (schema drift) and then its meaning (semantic drift), and watched what the platform did.
 
-The data is real NSW FuelCheck fuel prices ([why](docs/decisions.md#d10-nsw-fuelcheck-fuel-prices-as-the-dataset)), with mess added by a seeded script so every run is reproducible.
+The data is real NSW FuelCheck fuel prices ([why](docs/decisions.md#d10-nsw-fuelcheck-fuel-prices-as-the-dataset)), with mess added by a seeded script so every run is reproducible. I wrote a prediction before each drift case, saved every prompt I sent the AI builder in [`docs/prompts/`](docs/prompts/), and logged each decision and what it cost in the [decision log](docs/decisions.md).
 
-I logged every decision as I made it, with why and what it cost, in the [decision log](docs/decisions.md) (15 entries, including the ones that didn't work out). Every prompt I sent the AI builder is saved in [`docs/prompts/`](docs/prompts/), and each drift case has a prediction I wrote down before running it.
-
-Start with the [results table](#results) and [top three findings](#top-three-findings), then the [trade-offs I made](#6-judgement-calls-and-trade-offs). Rhombus-specific terms (LLM node, `code_sha`, From Web URL…) are explained in the [glossary](observations/README.md#terms-used-in-the-write-ups).
+Start with the [results table](#results) and [top three findings](#top-three-findings). Rhombus terms (LLM node, `code_sha`, drift pipeline…) are in the [glossary](observations/README.md#terms-used-in-the-write-ups).
 
 | Folder | What's in it |
 |---|---|
@@ -16,8 +14,8 @@ Start with the [results table](#results) and [top three findings](#top-three-fin
 | [`datasets/`](datasets/) | The baseline, every drifted version, and the script that makes them |
 | [`observations/`](observations/) | One write-up per case, with screenshots in [`evidence/`](observations/evidence/) |
 | [`docs/`](docs/) | Setup steps, every AI-builder prompt I sent, and a [decision log](docs/decisions.md) |
-| [`dashboard/`](dashboard/) | The bonus dashboard (built by `scripts/build_dashboard.py`), plus one saved GCS output per case in `dashboard/data/` |
-| [`scripts/`](scripts/) · [`infra/`](infra/) | S3 upload/presign helpers, the test runner, IAM policies |
+| [`dashboard/`](dashboard/) | The bonus dashboard, built by `scripts/build_dashboard.py`, with the GCS outputs it compares in `dashboard/data/` |
+| [`scripts/`](scripts/) · [`infra/`](infra/) | Upload and import helpers, the test runner, the dashboard builder, IAM policies |
 
 ---
 
@@ -49,7 +47,7 @@ Give it the file the pipeline read and the file it wrote. It reports what's diff
 python data-validation/validate.py datasets/baseline.csv dashboard/data/baseline.csv
 python data-validation/validate.py datasets/schema-drift1-drop-column.csv --no-output    # when the run wrote nothing
 ```
-My GCS outputs are in `dashboard/data/` (one per case), so the first command works straight after cloning. For your own runs, download the output from GCS and pass its path. The inputs are in [`datasets/`](datasets/) (`python datasets/generate.py` rebuilds them). Every run's result is in [`data-validation/results/`](data-validation/results/), and [`runs.csv`](data-validation/runs.csv) records which input and output each run used.
+My GCS outputs are in `dashboard/data/`, so the first command works straight after cloning. For your own runs, download the output from GCS and pass its path. Results are in [`data-validation/results/`](data-validation/results/).
 
 ---
 
@@ -68,36 +66,44 @@ I fixed this before testing, so the labels weren't picked to fit the results. Se
 
 **How I judge "chatbot fix worked?"** I paste the error with Ask Chatbot, apply what it suggests and re-run. It's a yes only if the chatbot fixes it **by itself**. If it needs me to point at the cause, or several prompts, that's a no.
 
-**Every drift case starts from the same verified baseline pipeline.** After each case I rebuilt it and checked the output was byte-identical to the original before the next case ([why](observations/schema-drift3-change-type.md)).
+**How each case ran.** The baseline is its own pipeline, next to an exact copy on the same canvas. Each case switches the copy's input to the drifted file, and the chatbot's fixes land on the copy. Before every case I reset the copy and checked its output was byte-identical to the baseline's ([D6](docs/decisions.md#d6-the-baseline-is-its-own-pipeline-on-the-same-canvas)). Every setup ran at least 3 times and behaved the same each time.
 
 ### Results
-Schema drift (`schema-drift1–5`) is Part 2 of the brief and semantic drift (`semantic-drift1–2`) is Part 3. Every file, result and screenshot for a case starts with its ID.
+Schema drift (`schema-drift1–5`) is Part 2 of the brief, semantic drift (`semantic-drift1–2`) is Part 3. Every file and screenshot for a case starts with its ID.
 
 | ID | Case | Change | Pipeline stopped? | Reached GCS? | Chatbot fix worked? | Severity |
 |---|---|---|---|---|---|---|
 | | [Setup: S3 connection](observations/setup-s3-source-connection.md) | none | Never connected | No | No. Right cause, but a fix only Rhombus can apply | High |
 | | [Baseline](observations/baseline.md) | none | No, passed | Yes, 2,363 rows | n/a | **Critical**: 733 dates silently swapped |
-| schema-drift1 | [Drop column](observations/schema-drift1-drop-column.md) | `Brand` removed | Yes, clear error at the right node | Nothing | No. Wrong diagnosis, code unchanged | Medium |
-| schema-drift2 | [Rename column](observations/schema-drift2-rename-column.md) | `Price` → `PriceCentsPerLitre` | Yes, clear error at the right node | Nothing | No. Right diagnosis, but the code that runs never changed | Medium |
-| schema-drift3 | [Change type](observations/schema-drift3-change-type.md) | `2174` → `NSW 2174` | Yes, but two nodes late, with a generic error | Nothing | No. Blamed the wrong node | High |
-| schema-drift4 | [Add column](observations/schema-drift4-add-column.md) | new `IsDiscounted` | Yes, but not because of the column | Yes, after 4 prompts, **57 rows short** | No | High |
-| schema-drift5 | [All four at once](observations/schema-drift5-combined.md) | all of the above | One error at a time, then **"success"** | **Header-only file, 0 rows** | No. Its fixes made the failure silent | **Critical** |
-| semantic-drift1 | [Cents → dollars](observations/semantic-drift1-cents-to-dollars.md) | `253.9` → `2.539` | No, a yellow popup, then **"success"** | **Header-only file, 0 rows** | n/a (nothing failed) | **Critical** |
-| semantic-drift2 | [Dates as MM/DD](observations/semantic-drift2-date-mmdd.md) | `17/09` → `09/17` | No, silent success | Yes, and *more* correct than the baseline | n/a | High |
+| schema-drift1 | [Drop column](observations/schema-drift1-drop-column.md) | `Brand` removed | Yes, at the right node (bare `KeyError`) | Nothing | No. Wrong diagnosis, and it edited the **baseline** pipeline | Medium |
+| schema-drift2 | [Rename column](observations/schema-drift2-rename-column.md) | `Price` → `PriceCentsPerLitre` | Yes, clear error at the right node | Nothing | No. Its fix moved the failure and broke the step for the original file | Medium |
+| schema-drift3 | [Change type](observations/schema-drift3-change-type.md) | `2174` → `NSW 2174` | Yes, but at dedup, two steps late (a canvas card flags the right step) | Nothing; after the fix, **4 rows with a made-up postcode** | Partly. Green run, but it changed the rule | High, **Critical** after the fix |
+| schema-drift4 | [Add column](observations/schema-drift4-add-column.md) | new `IsDiscounted` | No, silent success | Yes, 2,363 rows with the new column | n/a | Low |
+| schema-drift5 | [All four at once](observations/schema-drift5-combined.md) | all of the above | Yes, on the first missing column only | Nothing | No. "Replaced" 6 nodes; the same code still ran | Medium |
+| semantic-drift1 | [Cents → dollars](observations/semantic-drift1-cents-to-dollars.md) | `253.9` → `2.539` | Yes, "DataFrame should not be empty" at dedup; nothing about units | Nothing | No. Inspected the wrong file and blamed `Brand` | High |
+| semantic-drift2 | [Dates as MM/DD](observations/semantic-drift2-date-mmdd.md) | `17/09` → `09/17` | No, silent success | Yes, and *more* correct than the baseline | n/a | Low |
 
-**Semantic drift: did my validation catch it?** Cents → dollars: yes, from the row count (0 rows vs 38 expected). MM/DD: it flagged a big mismatch, but its "expected" output applied my DD/MM rule to a US-format file, so it was the wrong side. I needed the answer key (the correct output my dataset script writes) to see that Rhombus was actually right ([details](observations/semantic-drift2-date-mmdd.md)). Rhombus noticed neither.
+**Semantic drift: did my validation catch it?** Cents → dollars: yes (no output, where my rules expect 38 rows). MM/DD: it flagged a big mismatch, but on the wrong side. My DD/MM rule doesn't fit a month-first file, and the answer key shows every row Rhombus wrote is right ([details](observations/semantic-drift2-date-mmdd.md)). Rhombus noticed neither change in meaning.
 
 ### Top three findings
 
-1. **Green runs deliver wrong or empty data (Critical).** The baseline silently swaps day and month on 733 dates, because Rhombus guesses dates are month-first when it imports a file. In two drift cases a run reported "Pipeline completed successfully" and wrote a CSV with a header and no rows. In another, a "fixed" pipeline quietly lost 57 rows. Nothing in Rhombus flags any of it. There's no row count and no warning that stays on screen. My external validation was the only thing that caught it. A "0 rows written" alert and a date-format choice at import would fix most of this.
+1. **The chatbot didn't fix anything by itself (0 of 5 failing cases), and twice it edited what it shouldn't.**
+   - In schema-drift1 its fix landed on the **baseline** pipeline, not the failing copy, so the re-run hit the same error with the same `code_sha`.
+   - In schema-drift5 it "fully replaced" six steps. The prompts changed, but the code that runs didn't.
+   - In semantic-drift1 it inspected the wrong file (the one named in an old chat message), blamed a missing `Brand`, and cut `Brand` from a built-in dedup step.
+   - When a fix did make a run pass (schema-drift3), it changed the rule: four invalid postcodes came out as a plausible `2999`, with a green run.
 
-2. **The chatbot didn't fix anything by itself (0 of 6: the S3 setup and the five schema cases).** The pattern repeats:
-   - It edits a step's instructions, but the old cached code keeps running (the code ID, `code_sha`, stays the same). It eventually admitted this.
-   - It inspected the wrong dataset, and it blamed nodes two steps away from the real cause, ignoring Rhombus's own warning on screen.
-   - Steps it created came with empty instructions, three times.
-   - In the combined case, its fixes turned a clear error into a silent empty file, and left a pipeline that no longer ran on the original data.
+2. **Green runs can carry wrong data, and the useful warnings are easy to miss (Critical).**
+   - The baseline silently swaps day and month on 733 dates, because Rhombus guesses dates are month-first at import.
+   - A new column (schema-drift4) flows into the cleaning steps and GCS without a word.
+   - When a step empties the table, the error names a later step ("DataFrame should not be empty" at dedup). The right step is flagged only on a canvas card, which covers the newest log entry and can't be closed.
+   - My validation, and diffing against the baseline output, caught all of these.
 
-3. **A scheduled pipeline can't see upstream changes, and changing its input breaks it.** The imported file is a one-time snapshot, so the schedule just logs "Skipped… unchanged data" forever and never notices the source changed. Pointing the pipeline at a new file wipes the settings of the built-in nodes and the output destination. Failures don't appear in the schedule's history. On top of that, the S3 connector itself was blocked inside Rhombus's own network, with an error telling me to fix a policy that was already correct.
+3. **The schedule keeps going, but it can't see upstream changes, and changing its input breaks it.**
+   - The imported file is a snapshot, so a changed source is "Skipped… unchanged data".
+   - Switching the input wipes the built-in steps' settings and the output destination.
+   - It does record failures and retries them every 5 minutes. After a long run of failures it turned itself Inactive with no notice.
+   - In schema-drift5, a scheduled run and a manual run a minute apart ran different code.
 
 Also from the API tests ([details](api-tests/README.md)):
 - Imported datasets store the full presigned S3 link, signature and access key id included, readable by anyone on the project.
@@ -108,13 +114,13 @@ Also from the API tests ([details](api-tests/README.md)):
 
 ## 3. Usability feedback
 
-**What I liked.** When it works, the AI builder is fast: one prompt with nine numbered rules gave me a nine-step pipeline, and the canvas makes it easy to see what each step does. The outputs are deterministic (the same input gave byte-identical files across runs and rebuilds), which made testing fair. When a column is missing, the error names the node and the column. "Ask Chatbot" on a log error is a good idea.
+**What I liked.** When it works, the AI builder is fast: one prompt with nine numbered rules gave me a nine-step pipeline, and the canvas makes it easy to see what each step does. The outputs are deterministic (the same input always gave the same file), which made testing fair. When a column is missing, the error names the node and the column. "Ask Chatbot" on a log error is a good idea.
 
 **What was frustrating.** Most of my time went into things around the pipeline, not the pipeline itself:
 - **During setup**, the S3 connector failed with a misleading error, and importing a CSV from a link failed ("no markdown table was found").
 - **The logs** print "Pipeline failed" and "completed successfully" in the same second. The most useful warnings ("No results found…") are popups that vanish. Scheduled runs don't show up in Logs at all.
-- **The chatbot's** edits don't always change the code that runs, and the only clue is an unchanged code ID in the error.
-- **Small things add up.** The model choice resets to the default on every page load, destinations have to be re-added per project, the builder can't set the destination it just created, and automated browsers get an "Ad Blocker Detected" popup that blocks clicks.
+- **The chatbot's** edits don't always change the code that runs, and the only clue is an unchanged code ID in the error. It also reads its own old chat history as if it described the current input.
+- **Small things add up.** There's no way to copy a pipeline or a node (the builder can't set code), the model choice resets to the default on every page load, destinations have to be re-added per project, the builder can't set the destination it just created, and automated browsers get an "Ad Blocker Detected" popup that blocks clicks.
 
 **What would help most.**
 1. Show the row count each step outputs, and warn or fail when a run writes 0 rows.
@@ -132,35 +138,36 @@ Day-to-day friction is in the [friction log](docs/setup/03-rhombus-pipeline.md#f
 
 ## 5. Observability dashboard (bonus)
 **[bluezed15.github.io/rhomb/dashboard](https://bluezed15.github.io/rhomb/dashboard/)** is one interactive page with the four views the brief asks for:
-- **Pipeline health** is a bar chart of every run for the baseline and each case, `schema-drift1` to `semantic-drift2` (succeeded vs failed), with my validator's verdict at the end of each bar. Click a bar to list its runs. Runs that failed on export setup aren't about the drift, so they're left out.
-- **Output consistency** shows the sha256 of every repeat run of the same input (5 baseline runs across 3 separate builds were identical, from [`consistency.csv`](data-validation/consistency.csv)), then a side-by-side diff. Pick any two files (inputs, the answer key, or one output per case) and press Run, and it shows them as tables with the changed cells highlighted. I didn't repeat each drift case, because every run costs credits and a manual re-import.
-- **Capability heat map** is each drift case × what a customer needs (noticed it, clear error, right data, chatbot fix, schedule), with a handled / breaks / missed verdict per drift. Hover to trace a row and column; click a cell for the reason and the evidence.
-- **Execution time** is a box plot per case with every run as a dot, and the baseline as a reference.
+- **Pipeline health**: every run of the baseline and each case, succeeded vs failed, with my validator's verdict at the end of each bar. Click a bar to list its runs. Setup runs (resetting the drift copy) are left out.
+- **Output consistency**: every setup's repeat runs (3+ each) compared by sha256, or by where they failed when nothing was written. Below it, pick any two files and press Run for a side-by-side diff with the changed cells highlighted and a short note on what kind of change it is.
+- **Capability heat map**: each case × what a customer needs (noticed it, clear error, right data, chatbot fix, schedule). Click a cell for the reason and the evidence.
+- **Execution time**: a box plot per case, every run a dot, with the baseline as a reference.
 
-It's a static page built from the repo's own data by [`scripts/build_dashboard.py`](scripts/build_dashboard.py): every run in [`rhombus-runs.csv`](data-validation/rhombus-runs.csv), the validator's [results](data-validation/results/), the [datasets](datasets/), and the downloaded outputs (copied into `dashboard/data/`). The heat map is my judgement per case, with each cell linked to its write-up. To view it locally, run `python -m http.server` in the repo root and open `localhost:8000/dashboard/` (the diff tool loads files, so it needs a server).
+Why I picked each chart is in [D15](docs/decisions.md#d15-a-different-chart-for-each-dashboard-view).
+
+It's a static page built from [`rhombus-runs.csv`](data-validation/rhombus-runs.csv), [`consistency.csv`](data-validation/consistency.csv), the validator's [results](data-validation/results/) and the downloaded outputs. The heat map is my judgement per case. To view it locally, run `python -m http.server` in the repo root and open `localhost:8000/dashboard/`.
 
 ---
 
 ## 6. Judgement calls and trade-offs
-The calls that shaped the results. I kept a [decision log](docs/decisions.md) as I went: every choice, why I made it, and what it cost, including where a plan didn't hold up (e.g. D6, D8). These are the ones that matter most:
+The calls that shaped the results most. The rest are in the [decision log](docs/decisions.md).
 
 | Call | Why | What it cost |
 |---|---|---|
-| **A presigned S3 link instead of the S3 connector** | The connector was denied inside Rhombus's own network, even with their exact policy | It's not the connector the brief asks for, and the import is a snapshot, so drift runs were started by re-importing the file, not by the schedule ([D9](docs/decisions.md#d9-s3-through-a-presigned-url-instead-of-the-s3-connector)) |
-| **Every drift case starts from the same verified pipeline** | So one case's chatbot fix can't leak into the next | A rebuild and a byte-for-byte check before each case. My first schema-drift3 attempt skipped this, and I had to redo it ([D6](docs/decisions.md#d6-every-drift-case-starts-from-the-same-verified-baseline)) |
+| **A presigned S3 link instead of the S3 connector** | The connector was denied inside Rhombus's own network, even with their exact policy | It's not the connector the brief asks for, and the import is a snapshot, so each drift file is imported once and a case switches the input ([D9](docs/decisions.md#d9-s3-through-a-presigned-url-instead-of-the-s3-connector)) |
+| **The baseline is its own pipeline, next to an exact copy** | So one case's chatbot fix can't leak into the next, and the baseline is never touched | Apply runs both pipelines, and resetting the copy before each case takes several re-runs. ([D6](docs/decisions.md#d6-the-baseline-is-its-own-pipeline-on-the-same-canvas)) |
 | **A strict "fixed by itself" rule for the chatbot** | It's what matters to someone relying on it | Harsher than a patient user would be. It's applied the same way to every case ([D11](docs/decisions.md#d11-a-strict-rule-for-did-the-chatbots-fix-work)) |
-| **Seven cases, one run each** | Breadth: every case the brief lists | It shows each behaviour happens, not how often ([D14](docs/decisions.md#d14-breadth-over-repetition)) |
+| **Seven cases, three runs of each setup** | Every case the brief lists, and the 3 repeats the consistency view asks for | The chatbot ran once per case, so its answers aren't repeated ([D14](docs/decisions.md#d14-breadth-over-repetition)) |
 | **Read-only API tests, bugs as expected failures** | Safe on a real account, and findings stay visible | Write endpoints aren't covered by the API suite ([D13](docs/decisions.md#d13-api-tests-are-read-only-and-known-bugs-are-written-as-expected-failures)) |
 | **A separate test account for the automated tests** | Keeps my own login out of the tests | The UI journey still puts a presigned link and the GCS key into Rhombus, so I run it myself and keep the report ([D12](docs/decisions.md#d12-tests-run-on-a-separate-test-account-and-type-no-secrets-of-mine)) |
 
 ## Limitations and what was not tested
-- **One run per drift case** (plus a clean re-run of the type change). That shows a behaviour happens. It doesn't rule out variance, especially in the chatbot, which gives different answers each time.
-- **No S3 connector.** It was blocked, so the source is a presigned link through Rhombus's "From Web URL" import ([D9](docs/decisions.md#d9-s3-through-a-presigned-url-instead-of-the-s3-connector)). Because that's a snapshot, drift runs were triggered by re-importing the file, not by the schedule itself.
-- **"What happens to the schedule" is answered properly only for schema-drift1 and schema-drift2.** There, the schedule stayed active, skipped every run as "unchanged data", and never recorded the failures. From schema-drift3 on I worked in a clean project without a schedule, since I already knew it would skip the same way. Each write-up says so.
+- **The chatbot was asked once per case.** It gives different answers each time, so its behaviour isn't shown to repeat.
+- **Drift isn't a change in S3.** The import is a snapshot, so each case switches the input to a pre-imported file ([D5](docs/decisions.md#d5-each-drift-file-is-its-own-import-and-a-case-switches-the-input)). The schedule paused itself after 5 skips for unchanged data, so the repeats were run by hand.
 - **My validator checks my rules, not ground truth.** That's fine for most cases, but it misjudged the MM/DD case, where Rhombus's guess happened to be right. I used the answer key there.
-- **Outputs were downloaded by hand** from GCS (I didn't set up a read-only key), with each file and run recorded in [`runs.csv`](data-validation/runs.csv).
-- **Free plan limits.** 3 projects and limited credits shaped how often I could rebuild.
-- **API tests only read.** I didn't call write endpoints (create, delete, run) against a real account, and I didn't load-test a production service.
+- **Outputs were downloaded by hand** from GCS (no read-only key), and [`runs.csv`](data-validation/runs.csv) says which file belongs to each case.
+- **Free plan limits.** 3 projects and limited credits, so every case shares one project and one drift copy.
+- **No load testing.** I didn't want to load-test a production service I don't own.
 
 ## Test reliability (flakiness)
 Retries are off in [`playwright.config.ts`](playwright.config.ts), so a flaky step shows up as a failure instead of quietly passing on a second try.
@@ -168,7 +175,7 @@ Retries are off in [`playwright.config.ts`](playwright.config.ts), so a flaky st
 | Suite | Known instability | Cause | How it's handled |
 |---|---|---|---|
 | UI | An "Ad Blocker Detected" popup appears at random and swallows clicks | Rhombus's tracking scripts don't load in Playwright's browser | A handler closes it whenever it appears, and the step it interrupted is retried as a whole |
-| UI | The AI builder takes 1–3 min, and the first run after a rebuild is slower | Code is generated per node on the first run | Waits on real signals (node count from the API, the newest log line), never fixed sleeps |
+| UI | The AI builder takes 1–3 min, and the first run after a build is slower | Code is generated per node on the first run | Waits on real signals (node count from the API, the newest log line), never fixed sleeps |
 | UI | The builder's output varies: node labels, LLM vs built-in nodes | It's an LLM | Assertions use node *types* from the API and the output label pattern, not exact names |
 | UI | A half-finished journey blocks the Free plan's 3 projects | Failed runs leave projects behind | Reruns resume the unfinished project; `--fresh` starts clean |
 | API | The saved session expires | Short-lived login | The setup step checks it and logs in again when needed |
