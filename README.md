@@ -161,14 +161,6 @@ The calls that shaped the results most. The rest are in the [decision log](docs/
 | **Read-only API tests, bugs as expected failures** | Safe on a real account, and findings stay visible | Write endpoints aren't covered by the API suite ([D13](docs/decisions.md#d13-api-tests-are-read-only-and-known-bugs-are-written-as-expected-failures)) |
 | **A separate test account for the automated tests** | Keeps my own login out of the tests | The UI journey still puts a presigned link and the GCS key into Rhombus, so I run it myself and keep the report ([D12](docs/decisions.md#d12-tests-run-on-a-separate-test-account-and-type-no-secrets-of-mine)) |
 
-## Limitations and what was not tested
-- **The chatbot was asked once per case.** It gives different answers each time, so its behaviour isn't shown to repeat.
-- **Drift isn't a change in S3.** The import is a snapshot, so each case switches the input to a pre-imported file ([D5](docs/decisions.md#d5-each-drift-file-is-its-own-import-and-a-case-switches-the-input)). The schedule paused itself after 5 skips for unchanged data, so the repeats were run by hand.
-- **My validator checks my rules, not ground truth.** That's fine for most cases, but it misjudged the MM/DD case, where Rhombus's guess happened to be right. I used the answer key there.
-- **Outputs were downloaded by hand** from GCS (no read-only key), and [`runs.csv`](data-validation/runs.csv) says which file belongs to each case.
-- **Free plan limits.** 3 projects and limited credits, so every case shares one project and one drift copy.
-- **No load testing.** I didn't want to load-test a production service I don't own.
-
 ## Test reliability (flakiness)
 Retries are off in [`playwright.config.ts`](playwright.config.ts), so a flaky step shows up as a failure instead of quietly passing on a second try.
 

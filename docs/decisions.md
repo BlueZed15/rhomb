@@ -10,7 +10,7 @@ The trade-off is that Cypress has a nicer interactive runner. I'd only switch if
 
 ## D2. Python for data validation and the dataset
 pandas is the most direct way to compare two CSVs and generate the drift files, and the checks stay easy to read.
-The trade-off is a second language in the repo. In production I'd use something like Great Expectations, and read GCS directly instead of downloading files by hand (see the README's Limitations).
+The trade-off is a second language in the repo. In production I'd use something like Great Expectations, and read GCS directly instead of downloading files by hand.
 
 ## D3. A separate, minimal identity for each job
 Rhombus reads S3 through its own bucket policy, and writes to GCS with its own service account. My scripts use a separate IAM user with no delete permission. If one key leaks, it can only touch one bucket.
