@@ -132,7 +132,7 @@ Day-to-day friction is in the [friction log](docs/setup/03-rhombus-pipeline.md#f
 ---
 
 ## 4. Demo video
-> _Link to be added._ A 3-minute walkthrough of the UI tests, API tests and data validation: setup, where credentials go, how to run each suite, and what you'll see. Captions, no voiceover.
+**[Watch on Vimeo](https://vimeo.com/1238992218)**. A 3-minute walkthrough of the UI tests, API tests and data validation: setup, where credentials go, how to run each suite, and what you'll see. Captions, no voiceover.
 
 ---
 
