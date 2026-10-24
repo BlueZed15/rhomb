@@ -1,0 +1,9 @@
+case,archive_key,live_version_id,uploaded_at,gcs_output,notes
+baseline,input/archive/fuelcheck_baseline.xlsx,b9QKGLqJtazzTn3Jq_bMDzUbQ_XR_NiV,2026-10-23T06:40:44+00:00,rhom-1/baseline/baseline-output.csv,
+schema-drift1-drop-column,input/archive/fuelcheck_schema-drift1-drop-column.xlsx,b9QKGLqJtazzTn3Jq_bMDzUbQ_XR_NiV,2026-10-23T06:40:46+00:00,none (the run failed and wrote nothing),
+schema-drift2-rename-column,input/archive/fuelcheck_schema-drift2-rename-column.xlsx,b9QKGLqJtazzTn3Jq_bMDzUbQ_XR_NiV,2026-10-23T06:40:47+00:00,none (the run failed and wrote nothing),
+schema-drift3-change-type,input/archive/fuelcheck_schema-drift3-change-type.xlsx,b9QKGLqJtazzTn3Jq_bMDzUbQ_XR_NiV,2026-10-23T06:40:49+00:00,rhom-1/schema-drift3-change-type/output-after-chatbot-fix.csv (the drift run itself wrote nothing),
+schema-drift4-add-column,input/archive/fuelcheck_schema-drift4-add-column.xlsx,b9QKGLqJtazzTn3Jq_bMDzUbQ_XR_NiV,2026-10-23T06:40:50+00:00,rhom-1/schema-drift4-add-column/drift-output.csv,
+schema-drift5-combined,input/archive/fuelcheck_schema-drift5-combined.xlsx,b9QKGLqJtazzTn3Jq_bMDzUbQ_XR_NiV,2026-10-23T06:40:51+00:00,none (the run failed and wrote nothing),
+semantic-drift1-cents-to-dollars,input/archive/fuelcheck_semantic-drift1-cents-to-dollars.xlsx,b9QKGLqJtazzTn3Jq_bMDzUbQ_XR_NiV,2026-10-23T06:40:53+00:00,none (the run failed and wrote nothing),
+semantic-drift2-date-mmdd,input/archive/fuelcheck_semantic-drift2-date-mmdd.xlsx,b9QKGLqJtazzTn3Jq_bMDzUbQ_XR_NiV,2026-10-23T06:40:55+00:00,rhom-1/semantic-drift2-date-mmdd/drift-output.csv,

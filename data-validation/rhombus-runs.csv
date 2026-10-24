@@ -1,0 +1,75 @@
+scenario,time,trigger,rhombus_result,stopped_at,duration_s,counted,note,source
+baseline,2026-10-23 18:13:25,apply,success,,104,yes,first run after the builder prompt; the first run writes each step's code,observations/baseline.md
+baseline,2026-10-23 18:35:11,schedule,success,,11.6,yes,Execution #19672 (first scheduled run),observations/evidence/baseline/03-first-scheduled-run-success.jpg
+drift-setup,2026-10-23 20:44:58,apply,success,,,no,drift copy check after pasting the baseline code; both outputs 503fd6ed,observations/baseline.md#the-drift-copy
+schema-drift1-drop-column,2026-10-23 20:47,apply,success,,,no,pre-check on Table 1.csv (503fd6ed),data-validation/consistency.csv
+schema-drift1-drop-column,2026-10-23 20:49:21,input-switch,failure,drift_brand_normalise,14,yes,KeyError 'Brand' (code_sha=4d71fab9718a),observations/schema-drift1-drop-column.md
+schema-drift1-drop-column,2026-10-23 20:52:34,manual,failure,drift_brand_normalise,29,yes,after chatbot fix; same code_sha (fix edited the baseline step instead),observations/schema-drift1-drop-column.md
+schema-drift1-drop-column,2026-10-23 21:15,schedule,failure,Custom,,yes,Executions #19768-#19788 (21:15-22:00) all Failure; then the schedule went Inactive,observations/evidence/drift/04-schema-drift1-scheduled-runs-all-fail.jpg
+schema-drift2-rename-column,2026-10-23 23:02:43,apply,success,,,no,pre-check on Table 1.csv (503fd6ed),data-validation/consistency.csv
+schema-drift2-rename-column,2026-10-23 23:03:32,input-switch,failure,drift_drop_empty,18,yes,Column 'Price' does not exist (code_sha=b84404c094a4),observations/schema-drift2-rename-column.md
+schema-drift2-rename-column,2026-10-23 23:05:34,manual,failure,drift_drop_empty,20,yes,re-run to get Ask Chatbot back after a reload,observations/schema-drift2-rename-column.md
+schema-drift2-rename-column,2026-10-23 23:08:46,apply,failure,drift_dedup,99,yes,after chatbot fix; LLM steps passed; dedup can't hold Price on this file,observations/schema-drift2-rename-column.md
+schema-drift2-rename-column,2026-10-23 23:15:18,schedule,failure,Remove Duplicates,19.8,yes,Execution #19819,observations/evidence/drift/09-schema-drift2-scheduled-run-fails-at-dedup.jpg
+schema-drift2-rename-column,2026-10-23 23:20:06,schedule,failure,Remove Duplicates,,yes,Execution #19823,observations/schema-drift2-rename-column.md
+schema-drift3-change-type,2026-10-23 23:24:59,input-switch,failure,drift_drop_empty,,no,reset to Table 1.csv; chatbot-rewritten code hard-codes PriceCentsPerLitre,observations/schema-drift2-rename-column.md
+schema-drift3-change-type,2026-10-24 00:09:17,apply,failure,drift_output,18,no,reset: output not set yet,
+schema-drift3-change-type,2026-10-24 00:10:16,apply,success,,26,no,pre-check on Table 1.csv (503fd6ed),data-validation/consistency.csv
+schema-drift3-change-type,2026-10-24 00:15:07,input-switch,failure,drift_suburb_titlecase,15,no,input switch wiped the built-ins (setup),
+schema-drift3-change-type,2026-10-24 00:16:28,apply,failure,drift_dedup,21,no,dedup still wiped (setup),
+schema-drift3-change-type,2026-10-24 00:18:28,apply,failure,drift_dedup,16,yes,DataFrame should not be empty (output not yet set),observations/schema-drift3-change-type.md
+schema-drift3-change-type,2026-10-24 00:19:22,apply,failure,drift_dedup,14,yes,DataFrame should not be empty; canvas card flags drift_postcode_clean,observations/schema-drift3-change-type.md
+schema-drift3-change-type,2026-10-24 00:20:12,schedule,failure,Remove Duplicates,14.6,yes,Execution #19869,observations/evidence/drift/14-schema-drift3-change-type-scheduled-runs-fail-then-succeed.jpg
+schema-drift3-change-type,2026-10-24 00:23:26,manual,success,,80,yes,after chatbot fix; 2367 rows incl. 4 fabricated 2999 postcodes,observations/schema-drift3-change-type.md
+schema-drift3-change-type,2026-10-24 00:25:16,schedule,success,,16.0,yes,Execution #19872; same 2367-row output,observations/evidence/drift/14-schema-drift3-change-type-scheduled-runs-fail-then-succeed.jpg
+schema-drift3-change-type,2026-10-24 00:30,schedule,skipped,,,no,Skipped 1 time(s) in a row due to unchanged data,observations/evidence/drift/13-schema-drift3-change-type-schedule-skips-unchanged-data.jpg
+schema-drift4-add-column,2026-10-24 00:39:45,apply,success,,22,no,pre-check on Table 1.csv (503fd6ed),data-validation/consistency.csv
+schema-drift4-add-column,2026-10-24 00:40:06,schedule,success,,15.8,no,Execution #19886 on Table 1.csv (503fd6ed),data-validation/consistency.csv
+schema-drift4-add-column,2026-10-24 00:41:32,input-switch,failure,drift_suburb_titlecase,22,no,input switch wiped the built-ins (setup),
+schema-drift4-add-column,2026-10-24 00:44:23,apply,success,,20,yes,9 columns; IsDiscounted carried through; no warning,observations/schema-drift4-add-column.md
+schema-drift4-add-column,2026-10-24 00:45:20,schedule,success,,19.6,yes,Execution #19892; same output 0c977f10,observations/evidence/drift/16-schema-drift4-add-column-scheduled-run-succeeds.jpg
+schema-drift5-combined,2026-10-24 00:52:12,apply,success,,22,no,pre-check on Table 1.csv (503fd6ed),data-validation/consistency.csv
+schema-drift5-combined,2026-10-24 00:53:39,input-switch,failure,drift_drop_empty,19,yes,Column 'Price' does not exist (fails before the wiped built-ins),observations/schema-drift5-combined.md
+schema-drift5-combined,2026-10-24 00:55:04,schedule,failure,Custom,14.7,yes,Execution #19903,observations/evidence/drift/20-schema-drift5-combined-scheduled-runs.jpg
+schema-drift5-combined,2026-10-24 00:56:35,apply,failure,drift_drop_empty,19,yes,all settings on baseline values; same code_sha b84404c094a4,observations/schema-drift5-combined.md
+schema-drift5-combined,2026-10-24 01:00:25,schedule,failure,Remove Duplicates,68,yes,Execution #19906 right after the chatbot replaced 6 nodes; new code passed all LLM steps,observations/evidence/drift/20-schema-drift5-combined-scheduled-runs.jpg
+schema-drift5-combined,2026-10-24 01:01:16,manual,failure,drift_drop_empty,24,yes,after chatbot fix; same code_sha (original code ran again),observations/schema-drift5-combined.md
+schema-drift5-combined,2026-10-24 01:05:12,schedule,failure,Custom,15.6,yes,Execution #19911,observations/schema-drift5-combined.md
+semantic-drift1-cents-to-dollars,2026-10-24 01:19:39,apply,success,,19,no,pre-check on Table 1.csv (503fd6ed),data-validation/consistency.csv
+semantic-drift1-cents-to-dollars,2026-10-24 01:22:00,input-switch,failure,drift_suburb_titlecase,22,no,input switch wiped the built-ins (setup),
+semantic-drift1-cents-to-dollars,2026-10-24 01:25:05,schedule,failure,Remove Duplicates,14.7,yes,Execution #19933,observations/evidence/drift/24-semantic-drift1-cents-to-dollars-scheduled-runs-fail.jpg
+semantic-drift1-cents-to-dollars,2026-10-24 01:25:36,apply,failure,drift_dedup,22,yes,DataFrame should not be empty; canvas card flags drift_price_clean,observations/semantic-drift1-cents-to-dollars.md
+semantic-drift1-cents-to-dollars,2026-10-24 01:29:13,manual,failure,drift_dedup,28,yes,after chatbot fix (blamed missing Brand),observations/semantic-drift1-cents-to-dollars.md
+semantic-drift1-cents-to-dollars,2026-10-24 01:30:22,schedule,failure,Remove Duplicates,16.9,yes,Execution #19937,observations/evidence/drift/24-semantic-drift1-cents-to-dollars-scheduled-runs-fail.jpg
+semantic-drift2-date-mmdd,2026-10-24 01:40:51,apply,success,,19,no,pre-check on Table 1.csv (503fd6ed),data-validation/consistency.csv
+semantic-drift2-date-mmdd,2026-10-24 01:42:16,input-switch,failure,drift_suburb_titlecase,21,no,input switch wiped the built-ins (setup),
+semantic-drift2-date-mmdd,2026-10-24 01:46:01,apply,success,,19,yes,silent success; every row matches the answer key,observations/semantic-drift2-date-mmdd.md
+semantic-drift2-date-mmdd,2026-10-24 01:50,schedule,success,,,yes,scheduled run on the drift file; same output de296e18,data-validation/consistency.csv
+semantic-drift2-date-mmdd,2026-10-24 06:58:22,manual,success,,24,yes,consistency repeat 2/3; same output de296e18,data-validation/consistency.csv
+semantic-drift2-date-mmdd,2026-10-24 06:58:54,manual,success,,21,yes,consistency repeat 3/3; same output de296e18,data-validation/consistency.csv
+schema-drift4-add-column,2026-10-24 07:01:09,input-switch,failure,drift_suburb_titlecase,17,no,input switch wiped the built-ins (setup),
+schema-drift4-add-column,2026-10-24 07:03:51,apply,success,,16,yes,consistency repeat 1/3; same output 0c977f10,data-validation/consistency.csv
+schema-drift4-add-column,2026-10-24 07:04:17,manual,success,,16,yes,consistency repeat 2/3; same output 0c977f10,data-validation/consistency.csv
+schema-drift4-add-column,2026-10-24 07:04:35,manual,success,,21,yes,consistency repeat 3/3; same output 0c977f10 (the page never showed it finish; the file was written at 07:04:56),data-validation/consistency.csv
+schema-drift3-change-type,2026-10-24 07:10:47,input-switch,failure,drift_suburb_titlecase,17,no,input switch wiped the built-ins (setup),
+schema-drift3-change-type,2026-10-24 07:13:13,apply,failure,drift_dedup,22,yes,consistency repeat 1/3; DataFrame should not be empty,data-validation/consistency.csv
+schema-drift3-change-type,2026-10-24 07:13:51,manual,failure,drift_dedup,11,yes,consistency repeat 2/3; same failure,data-validation/consistency.csv
+schema-drift3-change-type,2026-10-24 07:14:09,manual,failure,drift_dedup,14,yes,consistency repeat 3/3; same failure,data-validation/consistency.csv
+semantic-drift1-cents-to-dollars,2026-10-24 07:17:41,apply,failure,drift_dedup,14,yes,consistency repeat 1/3; DataFrame should not be empty,data-validation/consistency.csv
+semantic-drift1-cents-to-dollars,2026-10-24 07:18:08,manual,failure,drift_dedup,18,yes,consistency repeat 2/3; same failure,data-validation/consistency.csv
+semantic-drift1-cents-to-dollars,2026-10-24 07:18:33,manual,failure,drift_dedup,21,yes,consistency repeat 3/3; same failure,data-validation/consistency.csv
+schema-drift1-drop-column,2026-10-24 07:20:02,input-switch,failure,drift_brand_normalise,14,yes,consistency repeat 1/3; same code_sha 4d71fab9718a,data-validation/consistency.csv
+schema-drift1-drop-column,2026-10-24 07:20:30,manual,failure,drift_brand_normalise,14,yes,consistency repeat 2/3; same code_sha,data-validation/consistency.csv
+schema-drift1-drop-column,2026-10-24 07:20:51,manual,failure,drift_brand_normalise,20,yes,consistency repeat 3/3; same code_sha,data-validation/consistency.csv
+schema-drift2-rename-column,2026-10-24 07:21:45,input-switch,failure,drift_drop_empty,15,yes,consistency repeat 1/3; same code_sha b84404c094a4,data-validation/consistency.csv
+schema-drift2-rename-column,2026-10-24 07:22:13,manual,failure,drift_drop_empty,20,yes,consistency repeat 2/3; same code_sha,data-validation/consistency.csv
+schema-drift2-rename-column,2026-10-24 07:22:39,manual,failure,drift_drop_empty,20,yes,consistency repeat 3/3; same code_sha,data-validation/consistency.csv
+schema-drift5-combined,2026-10-24 07:23:34,input-switch,failure,drift_drop_empty,15,yes,consistency repeat 1/3; same code_sha b84404c094a4,data-validation/consistency.csv
+schema-drift5-combined,2026-10-24 07:24:01,manual,failure,drift_drop_empty,14,yes,consistency repeat 2/3; same code_sha,data-validation/consistency.csv
+schema-drift5-combined,2026-10-24 07:24:23,manual,failure,drift_drop_empty,14,yes,consistency repeat 3/3; same code_sha,observations/evidence/drift/26-schema-drift5-combined-repeat-runs-same-failure.jpg
+baseline,2026-10-23 20:45:32,apply,success,,,yes,baseline pipeline ran alongside the drift copy check; output 503fd6ed,data-validation/consistency.csv
+baseline,2026-10-23 20:53:00,manual,success,,,yes,baseline pipeline ran alongside the schema-drift1 chatbot re-run; output 503fd6ed,data-validation/consistency.csv
+baseline,2026-10-23 20:55:21,apply,success,,,yes,baseline pipeline run; output 503fd6ed,data-validation/consistency.csv
+baseline,2026-10-23 21:00:35,schedule,success,,,yes,scheduled run while the chatbot had edited the baseline brand step; output still 503fd6ed,data-validation/consistency.csv
+baseline,2026-10-23 22:00:42,schedule,success,,,yes,scheduled run while the chatbot had edited the baseline brand step; output still 503fd6ed,data-validation/consistency.csv
+baseline,2026-10-23 22:50:26,apply,success,,,yes,baseline pipeline run after restoring the brand step; output 503fd6ed,data-validation/consistency.csv

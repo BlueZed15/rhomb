@@ -1,0 +1,26 @@
+{
+  "input_file": "datasets\\semantic-drift1-cents-to-dollars.csv",
+  "output_file": null,
+  "input_rows": 2613,
+  "input_columns": [
+    "ServiceStationName",
+    "Address",
+    "Suburb",
+    "Postcode",
+    "Brand",
+    "FuelCode",
+    "PriceUpdatedDate",
+    "Price"
+  ],
+  "schema_vs_baseline": {
+    "missing": [],
+    "extra": []
+  },
+  "expected_rows": 38,
+  "expected_note": null,
+  "output": null,
+  "reasons": [
+    "no output was written"
+  ],
+  "verdict": "FAIL"
+}

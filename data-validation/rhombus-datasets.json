@@ -1,0 +1,61 @@
+{
+  "project_id": 5359,
+  "datasets": [
+    {
+      "case": "baseline",
+      "dataset_id": 4720,
+      "table": "Table 1.csv",
+      "s3_key": "input/archive/fuelcheck_baseline.xlsx",
+      "imported_at": "2026-10-23T07:01:18.259Z"
+    },
+    {
+      "case": "schema-drift1-drop-column",
+      "dataset_id": 4721,
+      "table": "Table 1 (1).csv",
+      "s3_key": "input/archive/fuelcheck_schema-drift1-drop-column.xlsx",
+      "imported_at": "2026-10-23T07:01:34.794Z"
+    },
+    {
+      "case": "schema-drift2-rename-column",
+      "dataset_id": 4722,
+      "table": "Table 1 (2).csv",
+      "s3_key": "input/archive/fuelcheck_schema-drift2-rename-column.xlsx",
+      "imported_at": "2026-10-23T07:01:51.356Z"
+    },
+    {
+      "case": "schema-drift3-change-type",
+      "dataset_id": 4723,
+      "table": "Table 1 (3).csv",
+      "s3_key": "input/archive/fuelcheck_schema-drift3-change-type.xlsx",
+      "imported_at": "2026-10-23T07:02:07.781Z"
+    },
+    {
+      "case": "schema-drift4-add-column",
+      "dataset_id": 4724,
+      "table": "Table 1 (4).csv",
+      "s3_key": "input/archive/fuelcheck_schema-drift4-add-column.xlsx",
+      "imported_at": "2026-10-23T07:02:25.005Z"
+    },
+    {
+      "case": "schema-drift5-combined",
+      "dataset_id": 4725,
+      "table": "Table 1 (5).csv",
+      "s3_key": "input/archive/fuelcheck_schema-drift5-combined.xlsx",
+      "imported_at": "2026-10-23T07:02:40.166Z"
+    },
+    {
+      "case": "semantic-drift1-cents-to-dollars",
+      "dataset_id": 4726,
+      "table": "Table 1 (6).csv",
+      "s3_key": "input/archive/fuelcheck_semantic-drift1-cents-to-dollars.xlsx",
+      "imported_at": "2026-10-23T07:02:57.394Z"
+    },
+    {
+      "case": "semantic-drift2-date-mmdd",
+      "dataset_id": 4727,
+      "table": "Table 1 (7).csv",
+      "s3_key": "input/archive/fuelcheck_semantic-drift2-date-mmdd.xlsx",
+      "imported_at": "2026-10-23T07:03:13.201Z"
+    }
+  ]
+}

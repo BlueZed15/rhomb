@@ -1,0 +1,33 @@
+{
+  "input_file": "datasets\\schema-drift5-combined.csv",
+  "output_file": null,
+  "input_rows": 2613,
+  "input_columns": [
+    "ServiceStationName",
+    "Address",
+    "Suburb",
+    "Postcode",
+    "FuelCode",
+    "IsDiscounted",
+    "PriceUpdatedDate",
+    "PriceCentsPerLitre"
+  ],
+  "schema_vs_baseline": {
+    "missing": [
+      "Brand",
+      "Price"
+    ],
+    "extra": [
+      "IsDiscounted",
+      "PriceCentsPerLitre"
+    ]
+  },
+  "expected_rows": null,
+  "expected_note": "the cleaning rules can't run on this input (KeyError: ['Price'])",
+  "output": null,
+  "reasons": [
+    "input columns changed: Brand removed, Price removed, IsDiscounted added, PriceCentsPerLitre added",
+    "no output was written"
+  ],
+  "verdict": "FAIL"
+}

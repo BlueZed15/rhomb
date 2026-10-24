@@ -1,0 +1,41 @@
+output_file,run_time,pipeline,input,rows,sha256,source
+fuelcheck-baseline_1792739703234.csv,2026-10-23 18:15:03,baseline,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,baseline pipeline run
+fuelcheck-baseline_1792748732277.csv,2026-10-23 20:45:32,baseline,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,baseline pipeline run
+fuelcheck-baseline_1792749180421.csv,2026-10-23 20:53:00,baseline,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,baseline pipeline run
+fuelcheck-baseline_1792749321112.csv,2026-10-23 20:55:21,baseline,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,baseline pipeline run
+fuelcheck-baseline_1792749635963.csv,2026-10-23 21:00:35,baseline,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,baseline pipeline run
+fuelcheck-baseline_1792753242479.csv,2026-10-23 22:00:42,baseline,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,baseline pipeline run
+fuelcheck-baseline_1792756226125.csv,2026-10-23 22:50:26,baseline,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,baseline pipeline run
+fuelcheck-drift-setup_1792748731286.csv,2026-10-23 20:45:31,drift,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,drift copy check after setup
+fuelcheck-schema-drift1-drop-column_1792748895931.csv,2026-10-23 20:48:15,drift,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,drift pre-check before schema-drift1-drop-column
+fuelcheck-schema-drift2-rename-column_1792756978571.csv,2026-10-23 23:02:58,drift,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,drift pre-check before schema-drift2-rename-column
+fuelcheck-schema-drift3-change-type_1792761036365.csv,2026-10-24 00:10:36,drift,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,drift pre-check before schema-drift3-change-type
+fuelcheck-schema-drift4-add-column_1792762800861.csv,2026-10-24 00:40:00,drift,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,drift pre-check before schema-drift4-add-column
+fuelcheck-schema-drift4-add-column_1792762818811.csv,2026-10-24 00:40:18,drift,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,drift pre-check before schema-drift4-add-column
+fuelcheck-schema-drift5-combined_1792763548869.csv,2026-10-24 00:52:28,drift,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,drift pre-check before schema-drift5-combined
+fuelcheck-semantic-drift1-cents-to-dollars_1792765193575.csv,2026-10-24 01:19:53,drift,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,drift pre-check before semantic-drift1-cents-to-dollars
+fuelcheck-semantic-drift2-date-mmdd_1792766466202.csv,2026-10-24 01:41:06,drift,baseline,2363,503fd6ed186a520728d83bda0619b545de9c2f8bf629fc052959cc5b6c72ba02,drift pre-check before semantic-drift2-date-mmdd
+fuelcheck-semantic-drift2-date-mmdd_1792766773792.csv,2026-10-24 01:46:13,drift,semantic-drift2-date-mmdd,2363,de296e1882f1d9ee12d98b18541eb18756eb78771546df8fea5831261fd9434f,drift run
+fuelcheck-semantic-drift2-date-mmdd_1792767018165.csv,2026-10-24 01:50:18,drift,semantic-drift2-date-mmdd,2363,de296e1882f1d9ee12d98b18541eb18756eb78771546df8fea5831261fd9434f,scheduled run 01:50
+fuelcheck-semantic-drift2-date-mmdd_1792785521966.csv,2026-10-24 06:58:41,drift,semantic-drift2-date-mmdd,2363,de296e1882f1d9ee12d98b18541eb18756eb78771546df8fea5831261fd9434f,repeat run 2
+fuelcheck-semantic-drift2-date-mmdd_1792785548080.csv,2026-10-24 06:59:08,drift,semantic-drift2-date-mmdd,2363,de296e1882f1d9ee12d98b18541eb18756eb78771546df8fea5831261fd9434f,repeat run 3
+fuelcheck-schema-drift4-add-column_1792763081047.csv,2026-10-24 00:44:41,drift,schema-drift4-add-column,2363,0c977f10f0677500f4f71ac0bb02621d0421b0cc17eff766014a4ccd10a4e98f,drift run
+fuelcheck-schema-drift4-add-column_1792763137496.csv,2026-10-24 00:45:37,drift,schema-drift4-add-column,2363,0c977f10f0677500f4f71ac0bb02621d0421b0cc17eff766014a4ccd10a4e98f,scheduled run 00:45
+fuelcheck-schema-drift4-add-column_1792785843568.csv,2026-10-24 07:04:03,drift,schema-drift4-add-column,2363,0c977f10f0677500f4f71ac0bb02621d0421b0cc17eff766014a4ccd10a4e98f,repeat run 1
+fuelcheck-schema-drift4-add-column_1792785869358.csv,2026-10-24 07:04:29,drift,schema-drift4-add-column,2363,0c977f10f0677500f4f71ac0bb02621d0421b0cc17eff766014a4ccd10a4e98f,repeat run 2
+fuelcheck-schema-drift4-add-column_1792785893455.csv,2026-10-24 07:04:53,drift,schema-drift4-add-column,2363,0c977f10f0677500f4f71ac0bb02621d0421b0cc17eff766014a4ccd10a4e98f,repeat run 3
+none,2026-10-24 07:20:02,drift,schema-drift1-drop-column,0,failed at drift_brand_normalise · code_sha 4d71fab9718a,repeat run 1 (no output written)
+none,2026-10-24 07:20:30,drift,schema-drift1-drop-column,0,failed at drift_brand_normalise · code_sha 4d71fab9718a,repeat run 2 (no output written)
+none,2026-10-24 07:20:51,drift,schema-drift1-drop-column,0,failed at drift_brand_normalise · code_sha 4d71fab9718a,repeat run 3 (no output written)
+none,2026-10-24 07:21:45,drift,schema-drift2-rename-column,0,failed at drift_drop_empty · code_sha b84404c094a4,repeat run 1 (no output written)
+none,2026-10-24 07:22:13,drift,schema-drift2-rename-column,0,failed at drift_drop_empty · code_sha b84404c094a4,repeat run 2 (no output written)
+none,2026-10-24 07:22:39,drift,schema-drift2-rename-column,0,failed at drift_drop_empty · code_sha b84404c094a4,repeat run 3 (no output written)
+none,2026-10-24 07:13:13,drift,schema-drift3-change-type,0,failed at drift_dedup · DataFrame should not be empty,repeat run 1 (no output written)
+none,2026-10-24 07:13:51,drift,schema-drift3-change-type,0,failed at drift_dedup · DataFrame should not be empty,repeat run 2 (no output written)
+none,2026-10-24 07:14:09,drift,schema-drift3-change-type,0,failed at drift_dedup · DataFrame should not be empty,repeat run 3 (no output written)
+none,2026-10-24 07:23:34,drift,schema-drift5-combined,0,failed at drift_drop_empty · code_sha b84404c094a4,repeat run 1 (no output written)
+none,2026-10-24 07:24:01,drift,schema-drift5-combined,0,failed at drift_drop_empty · code_sha b84404c094a4,repeat run 2 (no output written)
+none,2026-10-24 07:24:23,drift,schema-drift5-combined,0,failed at drift_drop_empty · code_sha b84404c094a4,repeat run 3 (no output written)
+none,2026-10-24 07:17:41,drift,semantic-drift1-cents-to-dollars,0,failed at drift_dedup · DataFrame should not be empty,repeat run 1 (no output written)
+none,2026-10-24 07:18:08,drift,semantic-drift1-cents-to-dollars,0,failed at drift_dedup · DataFrame should not be empty,repeat run 2 (no output written)
+none,2026-10-24 07:18:33,drift,semantic-drift1-cents-to-dollars,0,failed at drift_dedup · DataFrame should not be empty,repeat run 3 (no output written)

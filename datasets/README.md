@@ -64,7 +64,7 @@ About 17% of rows ([manifest](baseline_manifest.json)). The real data already br
 | Near-duplicates (only differ in case or spacing) | 38 extra | dropped by rule 9 |
 
 ## Drift cases
-Each one is `baseline.csv` with a single change (except "combined"), uploaded over the same S3 file ([D5](../docs/decisions.md#d5-drift-goes-in-by-overwriting-the-same-file)).
+Each one is `baseline.csv` with a single change (except "combined"), imported into Rhombus once each ([D5](../docs/decisions.md#d5-each-drift-file-is-its-own-import-and-a-case-switches-the-input)).
 
 | File | Change |
 |---|---|
