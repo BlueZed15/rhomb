@@ -4,7 +4,7 @@ I tested Rhombus AI the way a customer would use it: a **scheduled pipeline from
 
 The data is real NSW FuelCheck fuel prices ([why](docs/decisions.md#d10-nsw-fuelcheck-fuel-prices-as-the-dataset)), with mess added by a seeded script so every run is reproducible. I wrote a prediction before each drift case, saved every prompt I sent the AI builder in [`docs/prompts/`](docs/prompts/), and logged each decision and what it cost in the [decision log](docs/decisions.md).
 
-Start with the [results table](#results) and [top three findings](#top-three-findings). Rhombus terms (LLM node, `code_sha`, drift pipeline…) are in the [glossary](observations/README.md#terms-used-in-the-write-ups).
+Start with the [results table](#results) and [top three findings](#top-three-findings). There's also a [live dashboard](https://bluezed15.github.io/rhomb/dashboard/) and a [3-minute demo video](https://vimeo.com/1238992218). Rhombus terms (LLM node, `code_sha`, drift pipeline…) are in the [glossary](observations/README.md#terms-used-in-the-write-ups).
 
 | Folder | What's in it |
 |---|---|
@@ -14,7 +14,7 @@ Start with the [results table](#results) and [top three findings](#top-three-fin
 | [`datasets/`](datasets/) | The baseline, every drifted version, and the script that makes them |
 | [`observations/`](observations/) | One write-up per case, with screenshots in [`evidence/`](observations/evidence/) |
 | [`docs/`](docs/) | Setup steps, every AI-builder prompt I sent, and a [decision log](docs/decisions.md) |
-| [`dashboard/`](dashboard/) | The bonus dashboard, with the GCS outputs it compares in `dashboard/data/` |
+| [`dashboard/`](dashboard/) | The bonus dashboard ([live](https://bluezed15.github.io/rhomb/dashboard/)), with the GCS outputs it compares in `dashboard/data/` |
 | [`scripts/`](scripts/) · [`infra/`](infra/) | Upload and import helpers, the test runner, the dashboard builder, IAM policies |
 
 ---
