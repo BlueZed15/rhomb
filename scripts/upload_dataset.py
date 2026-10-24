@@ -1,9 +1,8 @@
 """Put one dataset version live in S3, keep a named copy, and log the run.
 
-Rhombus reads one fixed object (input/fuelcheck.xlsx), so every drift case overwrites
-it (D5). A readable copy also goes to input/archive/, and the run is added to
-data-validation/runs.csv so each case ID maps to its input and output. (The copies I made
-during testing are named by run number: fuelcheck_1_... is schema-drift1, fuelcheck_7_... is semantic-drift2.)
+The live object is input/fuelcheck.xlsx. A copy also goes to input/archive/fuelcheck_<case>.xlsx,
+which scripts/import-inputs.mjs imports into Rhombus (D5), and the case is logged in
+data-validation/runs.csv so each case ID maps to its input and output.
 
 Usage:
     python scripts/upload_dataset.py schema-drift1-drop-column

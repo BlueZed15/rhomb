@@ -31,11 +31,11 @@ Thumbs.db
 # Raw source download (re-fetched by datasets/generate.py)
 datasets/raw/
 
-# Session handover note (not part of the submission)
-HANDOVER.md
-
 # Playwright (root config)
 .auth/
 test-results/
 playwright-report/
 demo-video/
+
+# local editor/preview config
+.claude/
