@@ -14,7 +14,7 @@ Start with the [results table](#results) and [top three findings](#top-three-fin
 | [`datasets/`](datasets/) | The baseline, every drifted version, and the script that makes them |
 | [`observations/`](observations/) | One write-up per case, with screenshots in [`evidence/`](observations/evidence/) |
 | [`docs/`](docs/) | Setup steps, every AI-builder prompt I sent, and a [decision log](docs/decisions.md) |
-| [`dashboard/`](dashboard/) | The bonus dashboard, built by `scripts/build_dashboard.py`, with the GCS outputs it compares in `dashboard/data/` |
+| [`dashboard/`](dashboard/) | The bonus dashboard, with the GCS outputs it compares in `dashboard/data/` |
 | [`scripts/`](scripts/) · [`infra/`](infra/) | Upload and import helpers, the test runner, the dashboard builder, IAM policies |
 
 ---
@@ -132,7 +132,7 @@ Day-to-day friction is in the [friction log](docs/setup/03-rhombus-pipeline.md#f
 ---
 
 ## 4. Demo video
-> _Link to be added._ A 3-minute walkthrough of the UI tests, API tests and data validation: setup, where credentials go, how to run each suite, and what you'll see. Captions, no voiceover. It's generated from the repo by [`scripts/make-demo-video.mjs`](scripts/make-demo-video.mjs); see [docs/demo-video.md](docs/demo-video.md).
+> _Link to be added._ A 3-minute walkthrough of the UI tests, API tests and data validation: setup, where credentials go, how to run each suite, and what you'll see. Captions, no voiceover.
 
 ---
 

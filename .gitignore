@@ -39,3 +39,9 @@ demo-video/
 
 # local editor/preview config
 .claude/
+
+# Local generators for the dashboard and demo video (outputs are committed, the generators aren't)
+scripts/build_dashboard.py
+scripts/dashboard_template.html
+scripts/make-demo-video.mjs
+docs/demo-video.md

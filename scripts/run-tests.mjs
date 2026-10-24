@@ -47,7 +47,7 @@ const env = { ...process.env };
 // A saved session (.auth/state.json) is reused by the setup step; pass --login to force a fresh one.
 const forceLogin = rest.includes('--login');
 if (rest.includes('--fresh')) env.JOURNEY_FRESH = '1'; // UI journey: redo every step instead of resuming
-if (rest.includes('--record')) env.DEMO_VIDEO = '1'; // keep every test's video, for scripts/make-demo-video.mjs
+if (rest.includes('--record')) env.DEMO_VIDEO = '1'; // keep every test's video
 const passthrough = rest.filter((a) => !['--login', '--fresh', '--record'].includes(a));
 const hasSession = existsSync(fileURLToPath(new URL('../.auth/state.json', import.meta.url)));
 if (forceLogin && hasSession) unlinkSync(fileURLToPath(new URL('../.auth/state.json', import.meta.url)));
