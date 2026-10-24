@@ -168,6 +168,12 @@ section { padding-block: 72px; border-bottom: 1px solid var(--line); }
 .diff tr.fold td { background: rgba(77, 163, 255, 0.06); color: var(--info); font-family: var(--sans); }
 .diff .empty { color: var(--text-2); padding: 18px; }
 .more { margin-top: 10px; }
+.diff-report { margin-top: 22px; border-top: 1px solid var(--line-2); padding-top: 16px; max-width: 86ch; }
+.diff-report h3 { font: 600 15px/1.3 var(--sans); margin-bottom: 8px; }
+.diff-report ul { margin: 0; padding-left: 18px; color: var(--fg-2); font-size: 14px; }
+.diff-report li { margin: 6px 0; }
+.diff-report b { font-weight: 500; color: var(--fg); }
+.diff-report code { font: 12px var(--mono); color: var(--fg); }
 
 /* 3 · Heat map: seamless inferno cells with a colour bar */
 .heat-wrap { display: grid; grid-template-columns: minmax(0, 1fr) 240px; gap: 28px; align-items: start; }
@@ -225,7 +231,7 @@ footer .wrap { display: grid; gap: 10px; }
 <header><div class="wrap">
   <h1>What Rhombus does when the <em>data changes.</em></h1>
   <p class="lede">I built an S3 → GCS pipeline with Rhombus's AI builder, then changed the data on purpose, first its structure <span class="tag">schema-drift1–5</span> and then its meaning <span class="tag">semantic-drift1–2</span>.</p>
-  <div class="meta"><span id="meta-counts"></span><span>Data as of 22 Oct 2026</span><a id="lnk-readme">README</a><a id="lnk-data">Raw run data</a></div>
+  <div class="meta"><span id="meta-counts"></span><span>Data as of 24 Oct 2026</span><a id="lnk-readme">README</a><a id="lnk-data">Raw run data</a></div>
   <div class="key" id="summary"></div>
 </div></header>
 
@@ -238,7 +244,7 @@ footer .wrap { display: grid; gap: 10px; }
   <div class="chart-box"><canvas id="health-chart" aria-label="Drift runs per case, succeeded and failed"></canvas></div>
   <div class="rates" id="rates"></div>
   <div class="detail" id="detail"></div>
-  <p class="note">Runs that failed on export setup (switching the input cleared the GCS destination) aren't about the drift, so they're left out. They're in <a id="src-runs-2">rhombus-runs.csv</a>.</p>
+  <p class="note">Setup runs (resetting the drift copy, and runs that failed only because switching the input wiped a built-in step or the output) aren't about the drift, so they're left out. They're in <a id="src-runs-2">rhombus-runs.csv</a>.</p>
 </div></section>
 
 <section id="consistency"><div class="wrap">
@@ -292,10 +298,11 @@ footer .wrap { display: grid; gap: 10px; }
     <div><h2>How long <em>each run took</em></h2><p>Seconds per run, from Rhombus's log timestamps. Every run is a dot; the box shows the middle half of a case's runs when it has three or more.</p></div>
   </div>
   <div class="box-scroll"><svg class="box-chart" id="box" role="img" aria-label="Box plot of execution time per case"></svg></div>
-  <p class="note">Drift runs take 5–27 s. The hollow dots at the top are the first run after a build (138 s and 153 s), when Rhombus writes each step's code. schema-drift1 and schema-drift2 only logged start times.</p>
+  <p class="note">Most runs take 14–29 s. The slow ones (68–104 s) are when Rhombus writes a step's code: they're the hollow dots above the break: the first baseline run, and runs right after a chatbot fix.</p>
 </div></section>
 
 <footer><div class="wrap">
+  <p>I explain why I picked each chart in <a id="src-d15">decision D15</a>.</p>
   <p>Every number here comes from the repo. Runs are in <a id="src-runs">rhombus-runs.csv</a>, repeat outputs in <a id="src-cons">consistency.csv</a> and validator verdicts in <a id="src-results">results/</a>. The diff tool loads <code>datasets/</code> and the downloaded GCS outputs. The heat map is my rating per case, each linked to its write-up. The page is built by <a id="src-builder">build_dashboard.py</a>.</p>
 </div></footer>
 <div id="tip" role="tooltip"></div>
@@ -325,7 +332,7 @@ function showTip(e, html) {
 const hideTip = () => { tip.style.opacity = 0; };
 
 $('#lnk-readme').href = DATA.sources.readme; $('#lnk-data').href = DATA.sources.runs; $('#src-runs-2').href = DATA.sources.runs;
-$('#src-runs').href = DATA.sources.runs; $('#src-cons').href = DATA.sources.consistency_csv; $('#src-results').href = DATA.sources.results; $('#src-builder').href = DATA.sources.builder;
+$('#src-runs').href = DATA.sources.runs; $('#src-d15').href = DATA.sources.d15; $('#src-cons').href = DATA.sources.consistency_csv; $('#src-results').href = DATA.sources.results; $('#src-builder').href = DATA.sources.builder;
 const counted = (s) => s.runs.filter((r) => r.counted === 'yes');
 const ok = (r) => r.counted === 'yes' && r.rhombus_result === 'success';
 const failed = (r) => r.counted === 'yes' && r.rhombus_result !== 'success';
@@ -337,12 +344,13 @@ const failed = (r) => r.counted === 'yes' && r.rhombus_result !== 'success';
   const pass = DRIFT.filter((s) => s.verdict === 'PASS').length;
   const greenWrong = DRIFT.filter((s) => s.runs.some(ok) && s.verdict !== 'PASS').length;
   const repeats = BASE.consistency; const same = repeats.filter((c) => c.sha === repeats[0]?.sha).length;
+  const setups = DATA.scenarios.filter((s) => s.consistency.length >= 3); const steady = setups.filter((s) => new Set(s.consistency.map((c) => c.sha)).size === 1).length;
   $('#meta-counts').textContent = `${DRIFT.length} drift cases · ${all.length} drift runs`;
   const fig = (big, small, text) => `<div><span class="big num">${big}<small> ${small}</small></span><p>${text}</p></div>`;
   $('#summary').innerHTML =
     fig(good, `of ${all.length}`, 'drift runs reported success in Rhombus.')
-    + fig(pass, `of ${DRIFT.length}`, `drift cases produced the right output. In ${greenWrong} of them a green run delivered wrong or empty data.`)
-    + fig(same, `of ${repeats.length}`, 'baseline re-runs gave byte-identical output, across 3 separate builds.');
+    + fig(pass, `of ${DRIFT.length}`, `drift cases passed my validator. ${greenWrong} had a green run that still failed it; for semantic-drift2 the answer key says Rhombus was right.`)
+    + fig(steady, `of ${setups.length}`, `setups gave the same result on every repeat (3+ runs each; the baseline file ${same} of ${repeats.length} times).`);
 })();
 
 /* 1 · Pipeline health: drift cases only, stacked horizontal bars */
@@ -432,16 +440,18 @@ function renderDetail() {
 
 /* 2 · Output consistency: repeat runs from consistency.csv, then a side-by-side table diff */
 (function consTable() {
-  const rows = DATA.scenarios.filter((s) => DATA.files.some((f) => f.scenario === s.id)).map((s) => {
-    const reps = s.consistency.length ? s.consistency : [{ sha: DATA.files.find((f) => f.scenario === s.id).sha }];
+  // Every setup ran the same input at least 3 times. Cases that wrote nothing are compared by where they failed.
+  const rows = DATA.scenarios.filter((s) => s.consistency.length).map((s) => {
+    const reps = s.consistency; const wrote = reps.some((c) => c.file !== 'none');
     const shas = [...new Set(reps.map((c) => c.sha))]; const same = shas.length === 1;
-    const verdict = reps.length < 2 ? '<span class="pill g-na">Ran once</span>' : same ? '<span class="pill g-good">Identical every time</span>' : '<span class="pill g-bad">Varies</span>';
-    const builds = new Set(reps.map((c) => (c.pipeline || '').replace(/ \(.*/, '').replace(/again.*/, 'again'))).size;
-    const sub = s.id === 'baseline' && reps.length > 1 ? `across ${builds} separate builds of the pipeline` : reps.length > 1 ? 'both from the same Apply' : '';
-    return `<tr><td>${tag(s)} <b style="font-weight:500">${esc(s.label)}</b></td><td class="num">${reps.length}${sub ? `<span class="sub">${sub}</span>` : ''}</td><td>${verdict}</td><td>${shas.map((h) => `<span class="chip g-${reps.length > 1 && same ? 'good' : 'na'}">${h}</span>`).join(' ')}</td></tr>`;
+    const verdict = reps.length < 2 ? '<span class="pill g-na">Ran once</span>' : !same ? '<span class="pill g-bad">Varies</span>'
+      : wrote ? '<span class="pill g-good">Identical every time</span>' : '<span class="pill g-good">Same failure every time</span>';
+    const sub = s.id === 'baseline' ? 'from the baseline pipeline and every pre-check of the drift copy (3 asked for)' : wrote ? 'drift run, scheduled run and repeats' : 'no output written';
+    const shown = shas.map((h) => (wrote ? h.slice(0, 12) : h));
+    return `<tr><td>${tag(s)} <b style="font-weight:500">${esc(s.label)}</b></td><td class="num">${reps.length}<span class="sub">${sub}</span></td><td>${verdict}</td><td>${shown.map((h) => `<span class="chip g-${same ? 'good' : 'na'}">${esc(h)}</span>`).join(' ')}</td></tr>`;
   });
-  $('#cons-table').innerHTML = `<thead><tr><th>Case</th><th>Outputs saved</th><th>Same output?</th><th>sha256 of the output</th></tr></thead><tbody>${rows.join('')}</tbody>`
-    + `<tfoot><tr><td colspan="4" class="muted" style="font-size:13px;border:0;padding-top:14px">schema-drift1–3 wrote nothing. I didn't repeat drift cases, since each run costs credits and a manual re-import.</td></tr></tfoot>`;
+  $('#cons-table').innerHTML = `<thead><tr><th>Case</th><th>Runs compared</th><th>Same result?</th><th>Output sha256, or where it failed</th></tr></thead><tbody>${rows.join('')}</tbody>`
+    + `<tfoot><tr><td colspan="4" class="muted" style="font-size:13px;border:0;padding-top:14px">Cases that wrote nothing are compared by the step they failed at and the error (with its code_sha for LLM steps). schema-drift3's output after the chatbot's fix isn't listed: that setup came from one chatbot answer, so I couldn't recreate it; its two runs (manual and scheduled) were identical, 0f899e3d.</td></tr></tfoot>`;
 })();
 const sel = { left: $('#left'), right: $('#right') };
 for (const el of Object.values(sel)) {
@@ -513,7 +523,7 @@ async function runDiff() {
     const diffCols = new Set([shared[0]]);
     rows.filter((x) => x.t === 'mod').forEach((x) => shared.forEach((n) => { if (x.l.c[L.indexOf(n)] !== x.r.c[R.indexOf(n)]) diffCols.add(n); }));
     L.concat(R).forEach((n) => { if (!shared.includes(n)) diffCols.add(n); });
-    D = { L, R, shared, rows, diffCols, labels: [label(sel.left.value), label(sel.right.value)] };
+    D = { L, R, shared, rows, diffCols, labels: [label(sel.left.value), label(sel.right.value)], nA: A.length, nB: B.length, allA: A.map((x) => x.c), allB: B.map((x) => x.c) };
     const mod = rows.filter((x) => x.t === 'mod').length;
     const del = rows.filter((x) => x.t === 'del').length, add = rows.filter((x) => x.t === 'add').length;
     const extra = [...L.filter((n) => !R.includes(n)).map((n) => `${n} only on the left`), ...R.filter((n) => !L.includes(n)).map((n) => `${n} only on the right`)];
@@ -601,6 +611,54 @@ function pairUp(ls, rs) {
   rs.forEach((r, b) => { if (!used.has(b)) out.push({ t: 'add', r }); });
   return out;
 }
+// A short written report under the diff: what kind of change each column shows, and what's missing or new.
+// It recognises the drifts this project tests (swapped day/month, a constant scale on numbers, case or spacing only).
+function describe(pairs) {
+  const n = pairs.length; const eg = (k) => `<code>${esc(pairs[k][0])}</code> → <code>${esc(pairs[k][1])}</code>`;
+  const dm = /^(\d{2})\/(\d{2})(\/.*)$/;
+  const swaps = pairs.filter(([a, b]) => { const x = dm.exec(a), y = dm.exec(b); return x && y && x[1] === y[2] && x[2] === y[1] && x[3] === y[3]; }).length;
+  if (swaps) return `${swaps === n ? 'all' : `${swaps.toLocaleString()} of`} ${n.toLocaleString()} have day and month swapped (e.g. ${eg(pairs.findIndex(([a, b]) => dm.test(a) && dm.test(b)))})`;
+  const num = /^-?\d+(\.\d+)?$/; const k0 = pairs.findIndex(([a, b]) => num.test(a) && num.test(b) && +a !== 0);
+  if (k0 >= 0) {
+    const m = +pairs[k0][1] / +pairs[k0][0];
+    const scaled = pairs.filter(([a, b]) => num.test(a) && num.test(b) && +a !== 0 && Math.abs(+b / +a / m - 1) < 0.01).length;
+    if (m !== 1 && scaled >= 0.9 * n) return `${scaled === n ? 'all' : `${scaled.toLocaleString()} of`} ${n.toLocaleString()} are multiplied by ${+m.toPrecision(3)} (e.g. ${eg(k0)})`;
+  }
+  const pre = pairs[0][1].endsWith(pairs[0][0]) ? pairs[0][1].slice(0, pairs[0][1].length - pairs[0][0].length) : '';
+  if (pre && pairs.every(([a, b]) => b === pre + a)) return `<code>${esc(pre)}</code> added in front of all ${n.toLocaleString()} (e.g. ${eg(0)}), so the values are no longer numbers`;
+  if (pairs.every(([a, b]) => a.toLowerCase() === b.toLowerCase())) return `only the letter case differs, in ${n.toLocaleString()} rows (e.g. ${eg(0)})`;
+  if (pairs.every(([a, b]) => a.replace(/\s+/g, ' ').trim() === b.replace(/\s+/g, ' ').trim())) return `only spacing differs, in ${n.toLocaleString()} rows`;
+  return `${n.toLocaleString()} values differ (e.g. ${eg(0)})`;
+}
+function report() {
+  const [ln, rn] = ['left', 'right']; const li = [];
+  const mods = D.rows.filter((x) => x.t === 'mod'), dels = D.rows.filter((x) => x.t === 'del'), adds = D.rows.filter((x) => x.t === 'add');
+  const same = D.rows.reduce((n, x) => n + (x.t === 'same' ? 1 : x.t === 'fold' ? x.n : 0), 0);
+  li.push(`Left (<b>${esc(D.labels[0])}</b>) has ${D.nA.toLocaleString()} rows, right (<b>${esc(D.labels[1])}</b>) has ${D.nB.toLocaleString()}. ${same.toLocaleString()} rows match exactly${D.shared.length < Math.max(D.L.length, D.R.length) ? ' on the columns both files share' : ''}.`);
+  for (const [n, side] of [[D.nA, 'left'], [D.nB, 'right']]) if (!n) li.push(`The ${side} file is only a header, with no rows.`);
+  for (const name of D.shared) {
+    const i = D.L.indexOf(name), j = D.R.indexOf(name);
+    const pairs = mods.map((x) => [x.l.c[i] ?? '', x.r.c[j] ?? '']).filter(([a, b]) => a !== b);
+    if (pairs.length) li.push(`<b>${esc(name)}</b>: ${describe(pairs)}.`);
+  }
+  const station = (row, names) => esc(row.c[names.indexOf(D.shared[0])] ?? '');
+  if (dels.length) li.push(`${dels.length.toLocaleString()} ${dels.length === 1 ? 'row is' : 'rows are'} only on the ${ln} (e.g. ${station(dels[0].l, D.L)}).`);
+  if (adds.length) li.push(`${adds.length.toLocaleString()} ${adds.length === 1 ? 'row is' : 'rows are'} only on the ${rn} (e.g. ${station(adds[0].r, D.R)}).`);
+  // columns only one file has, with their values when there are only a few kinds
+  const extra = (names, rowsOf, side) => {
+    const only = names.filter((n) => !D.shared.includes(n)); if (!only.length) return;
+    const notes = only.map((n) => {
+      const k = names.indexOf(n); const counts = {};
+      rowsOf.forEach((c) => { counts[c[k]] = (counts[c[k]] || 0) + 1; });
+      const kinds = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      return `<b>${esc(n)}</b>${kinds.length && kinds.length <= 5 ? ` (${kinds.map(([v, c]) => `${esc(v || 'empty')} ${c.toLocaleString()}`).join(', ')})` : ''}`;
+    });
+    li.push(`${only.length === 1 ? 'Column' : 'Columns'} ${notes.join(', ')} ${only.length === 1 ? 'is' : 'are'} only on the ${side}.`);
+  };
+  extra(D.L, D.allA, ln); extra(D.R, D.allB, rn);
+  if (!mods.length && !dels.length && !adds.length) li.push('Apart from that, the rows are the same.');
+  return `<h3>What's different</h3><ul>${li.map((x) => `<li>${x}</li>`).join('')}</ul>`;
+}
 const WIDE = /name|address/i, MID = /date|suburb/i;
 const colW = (n) => (WIDE.test(n) ? 230 : MID.test(n) ? 160 : 100);
 function renderDiffView() {
@@ -618,7 +676,8 @@ function renderDiffView() {
       <div class="sbs"><div class="pane" id="bl">${table(D.L, D.vl, D.R, 'body')}</div><div class="pane" id="br">${table(D.R, D.vr, D.L, 'body')}</div></div>
     </div>
     ${allCols || D.vl.length === D.L.length ? '' : `<p class="note" style="margin-top:8px">Showing the columns that differ, plus ${esc(D.shared[0])} to tell rows apart. Tick "All columns" for the rest.</p>`}
-    <div class="more" id="more"></div>`;
+    <div class="more" id="more"></div>
+    <div class="diff-report">${report()}</div>`;
   // keep the two sides and their headers scrolled together sideways
   const panes = ['#bl', '#br', '#hl', '#hr'].map((id) => $(id)); let lock = false;
   for (const pn of panes.slice(0, 2)) pn.addEventListener('scroll', () => { if (lock) return; lock = true; panes.forEach((o) => { if (o !== pn) o.scrollLeft = pn.scrollLeft; }); lock = false; });
@@ -701,7 +760,7 @@ function renderSide() {
     const all = DRIFT.filter((s) => s.heat);
     const count = (v) => all.filter((s) => s.heat.verdict === v).length;
     side.innerHTML = `<span class="label">Summary</span><h3>${count('handled')} handled, ${count('breaks')} break, ${count('missed')} missed</h3>
-      <p class="why">Rhombus stops loudly when a column it needs disappears. It's weakest when the data <i>looks</i> fine, and both semantic cases went through as "successful" runs.</p>`;
+      <p class="why">Rhombus stops loudly when a column it needs disappears. It's weakest when the data <i>looks</i> fine: the new column and the MM/DD dates went through as "successful" runs, and when a step empties the table the error blames a later step.</p>`;
     return;
   }
   const s = DATA.scenarios.find((x) => x.id === pinned.s); const c = s.heat.cells[pinned.k];
@@ -737,7 +796,7 @@ $('#heat-filter').addEventListener('click', (e) => {
 });
 
 /* 4 · Execution time: per case, a slim box (3+ timed runs) and every run as a dot in a swarm beside it, so nothing overlaps.
-   The first run after a build (138 s+) sits in a band above a break in the axis. */
+   Runs where Rhombus writes code (60 s+) sit in a band above a break in the axis. */
 function swarm(vals, y, gap) {
   // place each dot at the first horizontal slot where it doesn't touch a dot already placed
   const placed = []; return vals.map((v) => {
@@ -754,7 +813,7 @@ function renderBox() {
   const muted = css('--text-3'), line = css('--line'), bg = css('--bg');
   let g = '';
   for (let t = 0; t <= maxS; t += 10) g += `<line class="grid" x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}"/><text x="${L - 10}" y="${y(t) + 4}" text-anchor="end">${t} s</text>`;
-  g += `<text x="${L - 10}" y="${T - 22}" text-anchor="end">138 s+</text><line x1="${L}" x2="${W - R}" y1="${T - 10}" y2="${T - 10}" stroke="${line}" stroke-dasharray="2 4"/>`;
+  g += `<text x="${L - 10}" y="${T - 22}" text-anchor="end">60 s+</text><line x1="${L}" x2="${W - R}" y1="${T - 10}" y2="${T - 10}" stroke="${line}" stroke-dasharray="2 4"/>`;
   g += `<line x1="${L + colW}" x2="${L + colW}" y1="${T - 30}" y2="${H - B + 46}" stroke="${css('--line-2')}" stroke-dasharray="2 4"/>`;
   sc.forEach((s, i) => {
     const x0 = L + colW * i; const bx = x0 + colW * 0.34; const dx = x0 + colW * 0.52;
@@ -782,7 +841,7 @@ function renderBox() {
     g += `<text x="${cx}" y="${H - B + 39}" text-anchor="middle" style="fill:${css('--fg-2')}">${esc(s.id === 'baseline' ? 'reference' : s.label)}</text>`;
     g += `<text x="${cx}" y="${H - B + 55}" text-anchor="middle" style="font-size:11px;fill:${muted}">${vals.length ? 'median ' + Math.round(q(vals, 0.5)) + ' s · ' + vals.length + (vals.length === 1 ? ' run' : ' runs') : ''}</text>`;
   });
-  g += `<g transform="translate(${W - R - 330}, 14)"><circle cx="0" cy="0" r="4" fill="${css('--good')}"/><text x="9" y="4">succeeded</text><circle cx="86" cy="0" r="4" fill="${css('--bad')}"/><text x="95" y="4">failed</text><circle cx="148" cy="0" r="4" fill="none" stroke="${css('--good')}" stroke-width="1.5"/><text x="157" y="4">first run after a build</text><rect x="290" y="-6" width="10" height="12" rx="2" fill="${css('--raise')}" stroke="${muted}"/><text x="306" y="4">spread</text></g>`;
+  g += `<g transform="translate(${W - R - 330}, 14)"><circle cx="0" cy="0" r="4" fill="${css('--good')}"/><text x="9" y="4">succeeded</text><circle cx="86" cy="0" r="4" fill="${css('--bad')}"/><text x="95" y="4">failed</text><circle cx="148" cy="0" r="4" fill="none" stroke="${css('--good')}" stroke-width="1.5"/><text x="157" y="4">writing code (60 s+)</text><rect x="290" y="-6" width="10" height="12" rx="2" fill="${css('--raise')}" stroke="${muted}"/><text x="306" y="4">spread</text></g>`;
   svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.innerHTML = g;
 }
 $('#box').addEventListener('mousemove', (e) => {

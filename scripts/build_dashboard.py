@@ -41,47 +41,47 @@ CAPABILITIES = [
     ("schedule", "Schedule notices"),
 ]
 HEAT = {
-    "schema-drift1-drop-column": ("breaks", "Stops with a clear error; nothing gets fixed", {
+    "schema-drift1-drop-column": ("breaks", "Stops at the right step; the chatbot's fix lands on the baseline", {
         "detects": (3, "Stops at the step that uses Brand."),
-        "cause": (3, "The error names the step and the missing column."),
+        "cause": (2, "Names the step, but the error is a bare KeyError: 'Brand'."),
         "data": (3, "Nothing is written, so no wrong data reaches GCS."),
-        "chatbot": (1, "Wrong diagnosis, and its edit never changed the code that runs (same code_sha)."),
-        "schedule": (1, "Skipped as \"unchanged data\"; the failure isn't in its history."),
+        "chatbot": (1, "Blamed nulls, and edited the baseline pipeline instead of the drift copy (same code_sha on re-run)."),
+        "schedule": (2, "Recorded every failure for 45 min, then turned itself Inactive with no notice."),
     }),
-    "schema-drift2-rename-column": ("breaks", "Stops with a clear error; nothing gets fixed", {
+    "schema-drift2-rename-column": ("breaks", "Stops with a clear error; the chatbot's fix moves the break", {
         "detects": (3, "Stops at the first step that uses Price."),
         "cause": (3, "The error names the step and the missing column."),
         "data": (3, "Nothing is written."),
-        "chatbot": (1, "Right diagnosis, but the code that runs never changed (same code_sha)."),
-        "schedule": (1, "Skipped as \"unchanged data\"."),
+        "chatbot": (1, "Rewrote the code for the new name; dedup then fails, and the step breaks on the original file."),
+        "schedule": (2, "Kept running and recorded the failures at Remove Duplicates."),
     }),
-    "schema-drift3-change-type": ("breaks", "Stops, but blames a step two places later", {
-        "detects": (2, "Only a passing popup: \"postcode_clean: No results found\"."),
-        "cause": (1, "The error names dedup_final, two steps after the real cause."),
+    "schema-drift3-change-type": ("breaks", "Stops two steps late; the chatbot's fix makes up postcodes", {
+        "detects": (2, "A canvas card flags postcode_clean (\"No results found\"), not the error."),
+        "cause": (1, "The error is \"DataFrame should not be empty\" at dedup, two steps after the cause."),
+        "data": (1, "After the chatbot's fix, a green run writes 4 rows with a made-up postcode 2999."),
+        "chatbot": (2, "The run passes by itself, but the fix changes the postcode rule."),
+        "schedule": (2, "Recorded the failure, then the fixed success, then skipped as unchanged data."),
+    }),
+    "schema-drift4-add-column": ("handled", "The new column flows through silently", {
+        "detects": (1, "No warning that a column appeared."),
+        "cause": (0, "No error."),
+        "data": (2, "The baseline's rows plus the new column; dedup ignores it and merges 57 rows."),
+        "chatbot": (0, "Nothing failed."),
+        "schedule": (3, "The scheduled run succeeded with the same output."),
+    }),
+    "schema-drift5-combined": ("breaks", "Reports one missing column; the chatbot's \"replacement\" changes nothing", {
+        "detects": (2, "Stops, but only on the first missing column."),
+        "cause": (2, "Names Price; says nothing about Brand, Postcode or the new column."),
         "data": (3, "Nothing is written."),
-        "chatbot": (1, "Blamed date_format; its fix failed."),
-        "schedule": (1, "The schedule never re-reads the file (seen in schema-drift1 and schema-drift2)."),
+        "chatbot": (1, "Wrong file, wrong cause; \"replaced\" 6 steps and the same code_sha ran."),
+        "schedule": (1, "A scheduled run and a manual run a minute apart ran different code."),
     }),
-    "schema-drift4-add-column": ("handled", "The new column flows through; the chatbot's later fix loses rows", {
-        "detects": (2, "The new column passes through without a warning."),
-        "cause": (2, "The errors were about wiped step settings, not the column."),
-        "data": (1, "After the chatbot's fixes, 57 rows are silently missing."),
-        "chatbot": (1, "4 prompts; its replacement steps had empty prompts."),
-        "schedule": (1, "The schedule never re-reads the file."),
-    }),
-    "schema-drift5-combined": ("breaks", "Fails one column at a time, then \"succeeds\" with an empty file", {
-        "detects": (2, "Stops, but reports one column at a time."),
-        "cause": (2, "Each error names one column; the first is a bare KeyError."),
-        "data": (1, "\"Success\" with a header-only file, 0 rows."),
-        "chatbot": (1, "Looked at the wrong file; its fixes made the failure silent."),
-        "schedule": (1, "A scheduled run would report success."),
-    }),
-    "semantic-drift1-cents-to-dollars": ("missed", "Reports success and writes 0 rows", {
-        "detects": (2, "A passing \"No results found\" popup, nothing about units."),
-        "cause": (1, "No error at all."),
-        "data": (1, "\"Success\" with 0 rows."),
-        "chatbot": (0, "Nothing failed, so there was nothing to give it."),
-        "schedule": (1, "A scheduled run would be green."),
+    "semantic-drift1-cents-to-dollars": ("breaks", "Fails on an empty table; nothing about units", {
+        "detects": (2, "A canvas card says price_clean returned no rows; nothing about dollars."),
+        "cause": (1, "\"DataFrame should not be empty\" at dedup."),
+        "data": (3, "Nothing is written."),
+        "chatbot": (1, "Inspected the wrong file and blamed a missing Brand; cut Brand from dedup."),
+        "schedule": (2, "Recorded the failures."),
     }),
     "semantic-drift2-date-mmdd": ("missed", "No warning; right only because Rhombus guesses month-first", {
         "detects": (1, "No warning of any kind."),
@@ -93,7 +93,8 @@ HEAT = {
 }
 
 # Files the diff tool can compare. Inputs are served from datasets/; one output per case is copied into dashboard/data/.
-# (Repeat runs of the same input were byte-identical, so they're counted in consistency.csv instead of listed here.)
+# (Repeat runs of the baseline file were byte-identical, so they're counted in consistency.csv instead of listed here.
+# schema-drift1/2/5 and semantic-drift1 wrote nothing.)
 INPUTS = [
     ("baseline.csv", "baseline · input"),
     ("baseline_expected.csv", "baseline · answer key (correct cleaned output)"),
@@ -106,11 +107,10 @@ INPUTS = [
     ("semantic-drift2-date-mmdd.csv", "semantic-drift2 · dates as MM/DD · input"),
 ]
 OUTPUTS = [
-    ("output_baseline.csv", "baseline", "baseline · output"),
-    ("output_schema-drift4-add-column.csv", "schema-drift4-add-column", "schema-drift4 · add column · output"),
-    ("output_schema-drift5-combined.csv", "schema-drift5-combined", "schema-drift5 · all four at once · output"),
-    ("output_semantic-drift1-cents-to-dollars.csv", "semantic-drift1-cents-to-dollars", "semantic-drift1 · cents → dollars · output"),
-    ("output_semantic-drift2-date-mmdd.csv", "semantic-drift2-date-mmdd", "semantic-drift2 · dates as MM/DD · output"),
+    ("fuelcheck-baseline_1792739703234.csv", "baseline", "baseline · output"),
+    ("fuelcheck-schema-drift3-change-type_1792761882629.csv", "schema-drift3-change-type", "schema-drift3 · change type · output after the chatbot's fix"),
+    ("fuelcheck-schema-drift4-add-column_1792763081047.csv", "schema-drift4-add-column", "schema-drift4 · add column · output"),
+    ("fuelcheck-semantic-drift2-date-mmdd_1792766773792.csv", "semantic-drift2-date-mmdd", "semantic-drift2 · dates as MM/DD · output"),
 ]
 
 
@@ -122,7 +122,8 @@ def read_csv(path):
 def main():
     runs = read_csv(ROOT / "data-validation" / "rhombus-runs.csv")
     for r in runs:
-        r["first_after_build"] = "writes each step's code" in r["note"]
+        # Runs over a minute are the ones where Rhombus writes a step's code (first run, or right after a chatbot fix)
+        r["first_after_build"] = float(r["duration_s"] or 0) > 60
 
     data_dir = OUT / "data"
     if data_dir.exists():
@@ -162,6 +163,7 @@ def main():
     data = {
         "scenarios": scenarios, "capabilities": CAPABILITIES, "files": files,
         "sources": {
+            "d15": REPO + "docs/decisions.md#d15-a-different-chart-for-each-dashboard-view",
             "consistency_csv": REPO + "data-validation/consistency.csv",
             "runs": REPO + "data-validation/rhombus-runs.csv",
             "consistency": REPO + "data-validation/consistency.csv",
