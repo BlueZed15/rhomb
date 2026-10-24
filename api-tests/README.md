@@ -2,7 +2,7 @@
 
 Tests that call Rhombus's backend directly. Rhombus has no public API, so I found these endpoints in the browser's network tab while using the app ([endpoint list](../docs/setup/03-rhombus-pipeline.md#endpoints-observed)).
 
-Run it with `npm run test:api` from the repo root (it asks for the test account the first time). Latest run: **7 passed in 15 s**, with the two known issues failing as expected.
+Run it with `npm run test:api` from the repo root (it asks for the test account the first time). Latest run: **7 passed in 10 s**, with the two known issues failing as expected.
 
 ## How auth works
 The web app swaps its login cookie at `GET https://rhombusai.com/api/auth/session` for a short-lived JWT (a signed login token), then sends it to `https://api.rhombusai.com/api/...` as `Authorization: Bearer <jwt>`. The tests do the same ([`helpers.ts`](helpers.ts)), so they exercise what a real browser does. The token is never printed.

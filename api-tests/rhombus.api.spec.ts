@@ -31,9 +31,10 @@ import { API, bearer, findPipelineProject, getToken } from './helpers';
 let token: string;
 let projectId: number | undefined;
 
-// A project in another organisation that definitely exists (my main account's baseline), plus a low id that
-// almost certainly belongs to someone else. "Exists but 404" is what proves access control, not just absence.
-const OTHER_ORG_PROJECTS = [process.env.OTHER_ORG_PROJECT_ID || '5354', '1'];
+// A project in another organisation that definitely exists (my main account's fuelcheck-drift, which holds the
+// baseline and drift pipelines), plus a low id that almost certainly belongs to someone else. "Exists but 404" is
+// what proves access control, not just absence.
+const OTHER_ORG_PROJECTS = [process.env.OTHER_ORG_PROJECT_ID || '5359', '1'];
 
 const UNAUTHORIZED = { detail: 'Unauthorized' };
 const leaksInternals = (body: string) => /traceback|exception|sqlalchemy|psycopg|syntax error|select .+ from/i.test(body);

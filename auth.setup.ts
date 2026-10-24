@@ -13,8 +13,12 @@ setup('log in with the test account', async ({ page, playwright }) => {
     const ctx = await playwright.request.newContext({ storageState: STATE });
     const res = await ctx.get(`${process.env.RHOMBUS_BASE_URL || 'https://rhombusai.com'}/api/auth/session`);
     const saved = res.ok() ? await res.json() : {};
+    // The session endpoint can still hand out a token the backend has stopped accepting, so try it once.
+    const works = saved.accessToken
+      ? (await ctx.get('https://api.rhombusai.com/api/dataset/projects/all', { headers: { Authorization: `Bearer ${saved.accessToken}` } })).ok()
+      : false;
     await ctx.dispose();
-    if (saved.accessToken) return;
+    if (works) return;
   }
 
   const email = process.env.RHOMBUS_EMAIL;

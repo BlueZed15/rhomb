@@ -19,15 +19,24 @@ const PROJECT_NAME = `qa-journey-${new Date().toISOString().slice(0, 16).replace
 // Reruns resume: steps already done in the journey project are verified, not redone. FRESH=1 (`--fresh`) redoes all.
 const FRESH = !!process.env.JOURNEY_FRESH;
 
+// The same rules as the prompt that built the baseline every drift case is compared against
+// (docs/prompts/06-baseline-pipeline.md), pointed at this project's input and destination.
 const CLEANING_PROMPT =
-  'Build a cleaning pipeline for the dataset in the Data Input node. One node per rule, in order. ' +
-  '1) Whitespace only: trim and collapse repeated spaces in text columns; do not change punctuation (261.9 stays 261.9). ' +
+  'Build the baseline cleaning pipeline: the Data Input node, then these rules in this order, one node per rule, ' +
+  `then a Data Output node exporting CSV to the Google Cloud Storage destination ${DESTINATION}. ` +
+  'Prefix every node name with base_ (for example base_input, base_whitespace_trim, base_output). ' +
+  '1) Whitespace only: trim leading/trailing spaces in every text column and collapse repeated spaces into one. ' +
+  'Do NOT remove or change punctuation, letters, digits, dots or hyphens (261.9 must stay 261.9, 7-Eleven must stay 7-Eleven). ' +
   '2) Drop rows where Price or FuelCode is empty. ' +
-  '3) Map fuel names to codes (Ethanol 94->E10, Unleaded 91->U91, Premium 95->P95, Premium 98->P98, Diesel->DL), upper-case, keep only those codes. ' +
-  '4) ALL CAPS brands -> the normal-case spelling if one exists. 5) Suburb to Title Case. ' +
-  '6) Postcode: strip a trailing ".0", keep only 4-digit postcodes. 7) Price: strip a trailing "c", numeric, keep 100-400. ' +
-  '8) PriceUpdatedDate as DD/MM/YYYY HH:MM:SS. 9) Remove exact duplicate rows. ' +
-  `Then add a Data Output node at the end exporting CSV to the Google Cloud Storage destination ${DESTINATION}.`;
+  '3) Make FuelCode an upper-case code, mapping full names to codes: "Ethanol 94" -> E10, "Unleaded 91" -> U91, ' +
+  '"Premium 95" -> P95, "Premium 98" -> P98, "Diesel" -> DL. Then drop rows whose FuelCode is not one of E10, U91, P95, P98, DL. ' +
+  '4) Brand: if a brand is written in ALL CAPS but the same brand appears elsewhere in normal case, use the normal-case spelling ' +
+  '(e.g. 7-ELEVEN -> 7-Eleven). Brands that only ever appear in caps (e.g. BP) stay as they are. ' +
+  'Do not merge different brands (Ampol, EG Ampol and Ampol Foodary are different brands). ' +
+  '5) Convert Suburb to Title Case. 6) Postcode: remove a trailing ".0", then drop rows where Postcode is not exactly 4 digits. ' +
+  '7) Price: remove a trailing "c", convert to a number, and drop rows where it is not a number or not between 100 and 400. ' +
+  '8) PriceUpdatedDate: output every value as DD/MM/YYYY HH:MM:SS. Some rows are in YYYY-MM-DD HH:MM:SS format and must be converted. ' +
+  '9) As the final step, remove exact duplicate rows. Keep all 8 columns with their current names and order; do not add or remove columns.';
 
 async function presignedSourceUrl(): Promise<string> {
   const s3 = new S3Client({ region: process.env.AWS_REGION });
@@ -49,10 +58,17 @@ async function openOutputNode(page: Page) {
   await page.getByRole('tab', { name: 'AI Builder' }).click();
   // The chat shows the builder's own label for the node (e.g. data_output, gcs_export), not the API's
   // internal name (output_node_1), so match the label.
-  const chatButton = page.getByRole('button', { name: /^[\w-]*(output|export)[\w-]*$/i }).last();
-  if (await chatButton.isVisible().catch(() => false)) {
-    await chatButton.click();
-  } else {
+  // Match the visible text: the button's accessible name also carries its icon's label.
+  const chatButtons = page.getByRole('button').filter({ hasText: /^\s*[\w-]*(output|export)[\w-]*\s*$/i });
+  // The chat history loads after the page, so give it a moment before falling back to the canvas.
+  await chatButtons.last().waitFor({ timeout: 15_000 }).catch(() => {});
+  // Older replies can name nodes that no longer exist, so try the newest first until one opens the panel.
+  let opened = false;
+  for (let i = (await chatButtons.count()) - 1; i >= 0 && !opened; i--) {
+    await chatButtons.nth(i).click().catch(() => {});
+    opened = await destinationPanel.waitFor({ timeout: 4_000 }).then(() => true, () => false);
+  }
+  if (!opened) {
     await page.getByRole('tab', { name: 'Canvas' }).click();
     const node = page.locator('.react-flow__node').filter({ hasText: 'Data Output' }).first();
     const canvas = page.locator('.react-flow').first();

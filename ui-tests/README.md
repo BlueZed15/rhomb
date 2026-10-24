@@ -9,7 +9,7 @@ Run it with `npm run test:ui` from the repo root, or `npm run test:ui -- --fresh
 | 0 | Log in (shared [`auth.setup.ts`](../auth.setup.ts)) | The session returns a valid token |
 | 1 | Create a project, or reuse an unfinished one (the Free plan allows 3) | The URL becomes `/workflow/<id>` |
 | 2 | **S3 source.** Sign a 1-hour link to the baseline in S3 with your IAM key, then Data Input → From Web URL → Fetch → Review Tables → Import | "table imported successfully", and the input node shows the table |
-| 3 | **AI-built pipeline.** One Pipeline-mode prompt with the 9 cleaning rules | The API shows ≥10 nodes (input, cleaning steps, output) |
+| 3 | **AI-built pipeline.** One Pipeline-mode prompt with the 9 cleaning rules, the same as [prompt 6](../docs/prompts/06-baseline-pipeline.md), which built the baseline the drift cases compare against | The API shows ≥10 nodes (input, cleaning steps, output) |
 | 4 | **GCS destination.** Open the output node, add GCS with your key file if the project has none, select it, run | The API shows a numeric `destination_id`, and the newest log line is "Pipeline completed successfully" |
 | 5 | **Schedule.** Add a Daily schedule | The card shows "Schedule for…", "Active" and "Next run" |
 
@@ -18,6 +18,7 @@ Run it with `npm run test:ui` from the repo root, or `npm run test:ui -- --fresh
 **Done by hand on purpose** (the same as I did manually, and written up):
 - The S3 connector is blocked, so the source is a presigned link ([D9](../docs/decisions.md#d9-s3-through-a-presigned-url-instead-of-the-s3-connector)).
 - The AI builder can't set a destination id, so the test picks it.
+- The drift copy next to the baseline, and the drift cases themselves, are manual. The builder can't copy a step's code ([D6](../docs/decisions.md#d6-the-baseline-is-its-own-pipeline-on-the-same-canvas)), and each case is written up in [`observations/`](../observations/).
 
 **Not done** are deleting the project or schedule afterwards (deleting is permanent), and reading the output file in GCS (that's [`data-validation/`](../data-validation/)).
 
